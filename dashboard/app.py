@@ -21,7 +21,7 @@ from agents import actions  # noqa: E402
 from agents.change import ChangeAgent  # noqa: E402
 from agents.integration import IntegrationAgent  # noqa: E402
 from agents.sla import SlaAgent  # noqa: E402
-from mock_apis import launcher  # noqa: E402
+from mock_apis import faults, launcher  # noqa: E402
 from support_agent import approvals, config, retrieval  # noqa: E402
 from support_agent.agent import SupportAgent  # noqa: E402
 from support_agent.tracing import load_traces  # noqa: E402
@@ -104,6 +104,76 @@ AGENT_UI = {
         workflow=["Load failed messages", "Group by error", "Check SAP preconditions", "Propose cited recovery",
                   "Integration lead approves"]),
 }
+# Edge cases beside the walkthrough: a healthy record (nothing to do) and a missing one (say so, don't guess).
+EDGE_CASES = {
+    "support": [("Why is invoice INV-5101 blocked?", "healthy: paid, nothing blocking it"),
+                ("Why is invoice INV-5999 blocked?", "missing record: says so, no guess")],
+    "sla": [("Explain the risk on INC-2004", "healthy: on track, nothing to escalate"),
+            ("Explain the risk on INC-2099", "missing record: says so, no guess")],
+    "change": [("Assess the impact of CR-503", "low risk: business sign-off only"),
+               ("Assess the impact of CR-599", "missing record: says so, no guess")],
+    "integration": [("Why did MSG-5003 fail?", "healthy: processed, nothing to fix"),
+                    ("Why did MSG-5099 fail?", "missing record: says so, no guess")],
+}
+# The assignment's Tasks 1-4 for each agent, shown on its page (scores for Task 4 come from evals/results).
+TASKS = {
+    "support": dict(
+        t1="Classify the request, look up the service desk and SAP, check the guard rules, answer with citations. "
+           "9 tools; the rules planner by default, or Claude.",
+        t2="Service desk (ITSM) + SAP S/4HANA. Strict response schemas, 3 attempts with backoff, a 1 s timeout, "
+           "and idempotency keys on unlocks and role changes.",
+        t3="Runbook search with citations and a grounding check. Role requests wait for the client authorisation "
+           "owner. Never: payment-block release, bank details, production transports, SAP_ALL.",
+        t4="57 development, 14 held-out and 20 blind cases, including prompt injection and cross-client requests.",
+        value="Routine L1 requests answered in under a second, around the clock, so consultants spend their time "
+              "on real incidents.",
+        kpis="Share of L1 requests closed without a consultant · time to first answer"),
+    "sla": dict(
+        t1="Load the open tickets, apply each client's contract SLA rules in code, rank breached and at-risk "
+           "tickets, draft a cited escalation. 7 tools.",
+        t2="Service desk ticket queue + client contracts API. A contract must define one rule per priority; with "
+           "the contracts API down, no deadline is claimed.",
+        t3="Cites the ticket, contract and escalation procedure. Only breached or at-risk tickets can be escalated, "
+           "one pending escalation per ticket, approved by the AMS delivery manager. Never: close tickets, lower "
+           "priority, delete tickets, contact the client.",
+        t4="23 development and 15 blind cases.",
+        value="Breaches caught hours earlier, and an SLA record that stays honest because nothing can be gamed.",
+        kpis="SLA compliance % · breaches per month · warning lead time"),
+    "change": dict(
+        t1="Load the change request, look up each object in the CMDB, apply the change approval rules, draft a "
+           "cited assessment. 6 tools.",
+        t2="Change management (CRs, assessments) + CMDB (objects, interfaces, tests, owners). A CAB submission "
+           "can't be sent twice.",
+        t3="Cites the CR, CMDB records and change rules. The CAB submission waits for the change manager; CAB "
+           "decides. Objects missing from the CMDB are flagged, never assumed safe. Never: approve changes, import "
+           "transports, skip tests.",
+        t4="22 development and 15 blind cases.",
+        value="Fewer failed changes and shorter CAB meetings, with unknown dependencies flagged instead of guessed.",
+        kpis="Change failure rate · CAB items sent back for rework"),
+    "integration": dict(
+        t1="List the failed messages, group them by error, check the preconditions in SAP, propose a cited "
+           "recovery, request reprocessing. 7 tools.",
+        t2="Integration message monitor + SAP S/4HANA (vendor master, system health). Without SAP, no message is "
+           "called safe to resend.",
+        t3="Cites the messages, SAP checks and runbook. Reprocessing waits for the integration lead: one error type "
+           "and at most 50 messages per request. Never: resend payment files, re-import bank statements, delete "
+           "messages.",
+        t4="22 development and 15 blind cases.",
+        value="Business flows recover faster, without ever double-posting a payment or a bank statement.",
+        kpis="Time to recover a failed interface · duplicate postings (target 0)"),
+}
+# "API condition" picker: one scripted condition per request on the agent's two APIs (see mock_apis/faults.py).
+CONDITION_LABELS = {
+    "normal": "Normal response", "transient": "Error, then recovery on retry",
+    "unavailable": "Unavailable (fails 3 times)", "timeout": "Timeout (too slow 3 times)",
+    "malformed": "Malformed data", "rate_limited": "Rate limited (HTTP 429)", "not_found": "Record not found (HTTP 404)",
+}
+DOCUMENTS = [
+    ("Executive brief", "OC00770_Task5_Executive_Brief_v2.pdf"),
+    ("Demo portal guide", "OC00770_Demo_Portal_Guide_v2.pdf"),
+    ("Presentation deck", "OC00770_Presentation_Deck.pdf"),
+    ("Task 5 technical document", "OC00770_Task5_Architecture_Demo_Monitoring_Safeguards.pdf"),
+]
 # Button text for long walkthrough messages (the full message is sent, and shown on hover).
 SHORT_LABELS = {
     "Please give me Z_MM_DISPLAY so I can see purchase orders": "Please give me Z_MM_DISPLAY",
@@ -136,7 +206,7 @@ def go(page: str) -> None:
 
 
 def reset_demo() -> None:
-    """Back to the starting data: mock systems, approval queues, chats and chaos sliders."""
+    """Back to the starting data: mock systems, approval queues, chats, chaos sliders and API conditions."""
     launcher.reset_all()
     for queue in ("actions.json", "approvals.json"):
         (config.RUNTIME_DIR / queue).unlink(missing_ok=True)
@@ -145,6 +215,8 @@ def reset_demo() -> None:
             del st.session_state[k]
         elif k.startswith("chaos_"):
             st.session_state[k] = 0.0
+        elif k.startswith("cond_"):
+            st.session_state[k] = "normal"
     st.session_state.reset_done = True
 
 
@@ -152,6 +224,11 @@ def eval_summary(agent: str, case_set: str) -> dict | None:
     name = "latest_rules" + ("" if agent == "support" else f"_{agent}") + ("" if case_set == "cases" else f"_{case_set}")
     f = ROOT / "evals" / "results" / f"{name}.json"
     return json.loads(f.read_text(encoding="utf-8"))["summary"] if f.exists() else None
+
+
+@st.cache_data
+def read_bytes(path: str) -> bytes:
+    return Path(path).read_bytes()
 
 
 def get(name: str, path: str):
@@ -173,6 +250,12 @@ with st.sidebar:
     st.caption(f"Business date: {config.TODAY} · SLA clock: {config.DEMO_NOW:%Y-%m-%d %H:%M}")
     st.info("Working demo on **mock data**: fictional clients, users and documents; six mock enterprise APIs on "
             "localhost; sample runbooks. No real client or personal data.")
+    docs = [(label, ROOT / name) for label, name in DOCUMENTS if (ROOT / name).exists()]
+    if docs:
+        st.markdown("**Documents**")
+        for label, path in docs:
+            st.download_button(f"⬇ {label}", read_bytes(str(path)), file_name=path.name, mime="application/pdf",
+                               key=f"doc_{path.stem}", use_container_width=True)
 
 
 # ---- shared pieces ---------------------------------------------------------------------
@@ -183,6 +266,17 @@ def show_sources(citations: list[str]) -> None:
             st.markdown(f"**[{c}]** {chunk.doc_title} → {chunk.heading}: _{chunk.text}_" if chunk else f"[{c}]")
         else:
             st.markdown(f"**[{c}]** record from the {SYSTEM_OF.get(c.split(':')[0], 'source')} API")
+
+
+def show_evidence(evidence: dict[str, str]) -> None:
+    """The exact records behind each citation, as the tools returned them in this turn."""
+    for cid, record in evidence.items():
+        where = "runbook" if cid.startswith("kb:") else f"{SYSTEM_OF.get(cid.split(':')[0], 'source')} API"
+        st.markdown(f"**[{cid}]** · {where}")
+        try:
+            st.code(json.dumps(json.loads(record), indent=2), language="json")
+        except ValueError:
+            st.code(record, language=None, wrap_lines=True)
 
 
 def action_card(item: dict, approver: str, prefix: str) -> None:
@@ -263,31 +357,80 @@ def live_state(key: str) -> None:
         st.warning(f"Couldn't read the mock systems: {exc}")
 
 
+def task_tabs(key: str) -> None:
+    """Assignment evidence for this agent: Tasks 1-4, business value and pilot KPIs."""
+    t = TASKS[key]
+    with st.expander("Assignment evidence · Tasks 1–4, business value and pilot KPIs"):
+        tabs = st.tabs(["Task 1 · Workflow", "Task 2 · Two APIs", "Task 3 · Evidence and approval",
+                        "Task 4 · Tests"])
+        tabs[0].write(t["t1"])
+        tabs[1].write(t["t2"])
+        tabs[2].write(t["t3"])
+        with tabs[3]:
+            st.write(t["t4"])
+            for case_set, label in (("cases", "Development"), ("holdout", "Held-out"), ("blind", "Blind")):
+                s = eval_summary(key, case_set)
+                if s:
+                    st.caption(f"**{label}** · {s['cases']} cases · accuracy {s['accuracy']:.0%} · made-up answers "
+                               f"{s['hallucination_rate']:.0%} · unsafe actions {s['unsafe_actions_executed']} · "
+                               f"p95 {s['latency_ms']['p95']:.0f} ms")
+        st.markdown(f"**Business value:** {t['value']}  \n**Pilot KPIs:** {t['kpis']}")
+
+
+def step_buttons(key: str, steps: list[tuple[str, str]], prefix: str, numbered: bool) -> None:
+    for i, (msg, shows) in enumerate(steps, start=1):
+        label = msg if len(msg) <= 46 else SHORT_LABELS.get(msg, msg[:43] + "…")
+        c1, c2 = st.columns([3, 2])
+        if c1.button(f"{i}. {label}" if numbered else label, key=f"{prefix}_{key}_{i}", use_container_width=True,
+                     help=msg):
+            st.session_state[f"pending_{key}"] = msg
+        c2.caption(shows)
+
+
+def ask_with_condition(key: str, actor: str, prompt: str, history: list[dict], cond: str, chaos: float):
+    """Run one request with the chosen API condition scripted on the agent's two APIs, then clear it."""
+    ui, script = AGENT_UI[key], faults.CONDITIONS[cond]
+    if script:
+        for name in ui["faults"]:
+            launcher.set_faults(launcher.URLS[name], script=script, random_rate=chaos)
+    try:
+        return AGENTS[key].ask(actor, prompt, history=history)
+    finally:
+        if script:   # whatever this request didn't consume must not leak into the next one
+            for name in ui["faults"]:
+                launcher.set_faults(launcher.URLS[name], random_rate=chaos)
+
+
 def chat_page(key: str) -> None:
-    ui, agent = AGENT_UI[key], AGENTS[key]
+    ui = AGENT_UI[key]
     st.header(ui["title"])
     st.caption(f"{ui['tag']} · for {ui['who']} · APIs: {ui['apis']} · approval: {ui['human']}")
     flow(ui["workflow"])
+    task_tabs(key)
     left, right = st.columns([3, 2], gap="large")
     with left:
-        a, b = st.columns([2, 1])
+        a, b, c = st.columns([2, 1.6, 1.3])
         actors = ui["actors"]
         actor = a.selectbox(ui["actor_label"], list(actors), format_func=lambda x: f"{x} · {actors[x]}",
                             key=f"actor_{key}")
-        chaos = b.slider("Chaos: API failure rate", 0.0, 0.8, 0.0, 0.1, key=f"chaos_{key}",
-                         help="Injects 500/503 errors, timeouts and malformed data into this agent's mock APIs")
+        cond = b.selectbox("API condition", list(CONDITION_LABELS), format_func=CONDITION_LABELS.get,
+                           key=f"cond_{key}",
+                           help="How this agent's two mock APIs answer each request: pick a failure to see "
+                                "retries and honest errors on demand")
+        chaos = c.slider("Random chaos", 0.0, 0.8, 0.0, 0.1, key=f"chaos_{key}",
+                         help="Injects 500/503 errors, timeouts and malformed data at random into this agent's "
+                              "mock APIs")
         if st.session_state.get(f"chaos_applied_{key}") != chaos:
             for name in ui["faults"]:
                 launcher.set_faults(launcher.URLS[name], random_rate=chaos)
             st.session_state[f"chaos_applied_{key}"] = chaos
 
         st.markdown("**Walkthrough:** click the steps in order")
-        for i, (msg, shows) in enumerate(ui["steps"], start=1):
-            label = msg if len(msg) <= 46 else SHORT_LABELS.get(msg, msg[:43] + "…")
-            c1, c2 = st.columns([3, 2])
-            if c1.button(f"{i}. {label}", key=f"step_{key}_{i}", use_container_width=True, help=msg):
-                st.session_state[f"pending_{key}"] = msg
-            c2.caption(shows)
+        step_buttons(key, ui["steps"], "step", numbered=True)
+        st.markdown("**Edge cases:** the agent should find nothing to do, or say what is missing")
+        step_buttons(key, EDGE_CASES[key], "edge", numbered=False)
+        st.caption(f"Guardrail on every request: at most {config.MAX_TOOL_STEPS} tool calls and "
+                   f"{config.TURN_BUDGET_S:.0f} s, then the agent stops.")
 
         history = st.session_state.setdefault(f"history_{key}", {}).setdefault(actor, [])
         for turn in history:
@@ -295,21 +438,29 @@ def chat_page(key: str) -> None:
                 st.markdown(turn["content"])
                 if turn.get("meta"):
                     m = turn["meta"]
+                    cond_note = f" · API condition: {CONDITION_LABELS[m['condition']]}" \
+                        if m.get("condition", "normal") != "normal" else ""
                     st.caption(f"{STATUS_ICON.get(m['status'], '')} {m['status']} · {m['latency_ms']} ms · "
-                               f"trace {m['trace_id']}")
+                               f"trace {m['trace_id']}{cond_note}")
                     with st.expander("Sources and tool calls"):
                         show_sources(m["citations"])
                         if m["tool_calls"]:
                             table(pd.DataFrame(m["tool_calls"])[["tool", "status", "message", "latency_ms",
                                                                  "api_retries"]])
+                        st.caption(f"Budget used: {len(m['tool_calls'])} of {config.MAX_TOOL_STEPS} tool calls · "
+                                   f"{m['latency_ms']:.0f} ms of {config.TURN_BUDGET_S:.0f} s")
+                    if m.get("evidence"):
+                        with st.expander(f"Source records behind the citations ({len(m['evidence'])})"):
+                            show_evidence(m["evidence"])
         prompt = st.chat_input(ui["placeholder"], key=f"input_{key}") or st.session_state.pop(f"pending_{key}", None)
         if prompt:
             llm_history = [{"role": t["role"], "content": t["content"]} for t in history[-6:]]
-            resp = agent.ask(actor, prompt, history=llm_history)
+            resp = ask_with_condition(key, actor, prompt, llm_history, cond, chaos)
             history.append({"role": "user", "content": prompt})
             history.append({"role": "assistant", "content": resp.answer, "meta": {
                 "status": resp.status, "latency_ms": resp.latency_ms, "trace_id": resp.trace_id,
-                "citations": resp.citations, "tool_calls": resp.tool_calls}})
+                "citations": resp.citations, "tool_calls": resp.tool_calls, "evidence": resp.evidence,
+                "condition": cond}})
             st.rerun()
         if history and st.button("Clear conversation", key=f"clear_{key}"):
             history.clear()

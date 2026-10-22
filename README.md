@@ -83,7 +83,7 @@ On a host that sets `$PORT`, the image listens on it automatically.
 ```bash
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python -m pytest                                  # 60 tests, incl. the portal end to end
+.venv/Scripts/python -m pytest                                  # 72 tests, incl. the portal end to end
 .venv/Scripts/python evals/run_evals.py --agent support         # also: --agent sla | change | integration
 .venv/Scripts/python evals/run_evals.py --agent sla --cases blind
 .venv/Scripts/python demo_script.py                             # scripted demo of all four agents
@@ -161,13 +161,23 @@ planner (already built) behind the same guard layers, and test it on anonymised 
      and the **Live view of the mock systems** shows the change land.
    - Step 4 shows a business rule saying no.
    - Steps 5–6 show a restricted action being blocked and a runbook answer.
-3. Expand **Sources and tool calls** under any answer to show its citations and the guard layer's decisions.
-4. Turn up the **Chaos** slider to show retries and honest "system unavailable" answers. The live view keeps
-   working while you do.
-5. Finish on **Approvals** (every decision and the audit log), **Monitoring** (filter by agent) and
-   **Evaluation**.
+   - Two **edge cases** below the steps: a healthy record (nothing to do) and a missing one (it says so).
+3. Expand **Sources and tool calls** under any answer to show its citations, the guard layer's decisions and
+   the budget used (at most 8 tool calls and 10 s per request). **Source records behind the citations** shows
+   the exact record each citation points to.
+4. Pick an **API condition** (error then recovery, unavailable, timeout, malformed data, rate limited, not
+   found) to show retries and honest "system unavailable" answers on demand; it applies to each request until
+   you set it back to Normal. **Random chaos** does the same at random. The live view keeps working either way.
+5. Open **Assignment evidence** at the top of an agent page for its Tasks 1–4, test scores, business value and
+   pilot KPIs.
+6. Finish on **Approvals** (every decision and the audit log), **Monitoring** (filter by agent) and
+   **Evaluation**. The sidebar has download buttons for the executive brief, the portal guide, the deck and the
+   technical Task 5 document.
 
-`tests/test_portal.py` runs exactly this flow for all four agents, including reset and chaos mode.
+`tests/test_portal.py` runs exactly this flow for all four agents, including reset, chaos mode, every API
+condition, the evidence viewer, the Task tabs, the edge cases and the downloads.
+
+The PDFs are built from `docs/` with `python docs/build_pdfs.py` (needs Playwright and Google Chrome).
 
 ## Submitting
 

@@ -4,8 +4,9 @@ Real enterprise systems fail: they return 5xx errors, time out, or send data
 that does not match the agreed contract. Each mock API owns a FaultInjector so
 tests and the demo UI can switch these failures on and watch the client cope.
 
-Faults can be scripted (a queue consumed one request at a time, used by tests)
-or random (a probability per request, used for the "chaos" slider in the demo).
+Faults can be scripted (a queue consumed one request at a time, used by tests
+and the demo's "API condition" picker) or random (a probability per request,
+used for the "chaos" slider in the demo).
 """
 import asyncio
 import random
@@ -16,8 +17,22 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-FAULT_TYPES = ("500", "503", "slow", "malformed")
+FAULT_TYPES = ("500", "503", "slow", "malformed")          # what random chaos picks from
+SCRIPTABLE = FAULT_TYPES + ("429", "404")                  # also allowed in a script
+STATUS_FAULTS = ("500", "503", "429", "404")
 SLOW_SECONDS = 2.5  # longer than the client's timeout, so "slow" looks like a timeout
+
+# Named conditions for one request, as scripts for each API the agent calls.
+# Three faults in a row outlast the client's three attempts; one is recovered by a retry.
+CONDITIONS = {
+    "normal": [],
+    "transient": ["503"],
+    "unavailable": ["503", "503", "503"],
+    "timeout": ["slow", "slow", "slow"],
+    "malformed": ["malformed"],
+    "rate_limited": ["429", "429", "429"],
+    "not_found": ["404"],
+}
 
 
 class FaultConfig(BaseModel):
@@ -35,7 +50,7 @@ class FaultInjector:
         # "none" in a script lets a request through untouched, so a test can
         # target e.g. the third request of a multi-call workflow.
         with self._lock:
-            self._script = deque(f for f in cfg.script if f in FAULT_TYPES or f == "none")
+            self._script = deque(f for f in cfg.script if f in SCRIPTABLE or f == "none")
             self.random_rate = max(0.0, min(cfg.random_rate, 1.0))
 
     def next_fault(self) -> str | None:
@@ -60,8 +75,9 @@ def install(app: FastAPI, injector: FaultInjector, reset_fn) -> None:
             return await call_next(request)
         fault = injector.next_fault()
         request.state.fault = fault
-        if fault in ("500", "503"):
-            return JSONResponse({"detail": f"injected {fault} error"}, status_code=int(fault))
+        if fault in STATUS_FAULTS:
+            detail = "record not found (injected)" if fault == "404" else f"injected {fault} error"
+            return JSONResponse({"detail": detail}, status_code=int(fault))
         response = await call_next(request)
         if fault == "slow":
             # The work is done (a POST is committed) but the reply arrives late.

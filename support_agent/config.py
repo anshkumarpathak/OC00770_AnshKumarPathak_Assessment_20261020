@@ -43,6 +43,11 @@ API_TIMEOUT_S = 1.0
 MAX_ATTEMPTS = 3
 BACKOFF_BASE_S = 0.2
 
+# Budget per request: at most this many tool calls, within this much time.
+# A confused planner stops instead of looping; the portal shows both limits.
+MAX_TOOL_STEPS = 8
+TURN_BUDGET_S = 10.0
+
 # Retrieval: below these we treat the knowledge base as having no answer
 # (calibrated on the questions in evals/cases.jsonl)
 RETRIEVAL_MIN_SCORE = 2.0

@@ -110,7 +110,9 @@ class ToolExecutor:
         t0 = time.perf_counter()
         n_calls_before = len(self.desk.calls) + len(self.sap.calls)
 
-        if name in DENIED_TOOLS:
+        if why := self.trace.over_budget():
+            result = ToolResult("error", f"budget_exceeded: {why}")
+        elif name in DENIED_TOOLS:
             result = ToolResult("blocked", f"Action '{name}' is not permitted. {DENIED_TOOLS[name]}")
         elif name not in TOOLS:
             result = ToolResult("blocked", f"Unknown tool '{name}'.")

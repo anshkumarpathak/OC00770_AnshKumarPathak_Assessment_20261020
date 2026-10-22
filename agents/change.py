@@ -191,7 +191,8 @@ class _Failed(Exception):
 
 
 def _ok(r: ToolResult) -> ToolResult:
-    if r.status == "error":
+    # Read-only lookups: anything but "ok" (an outage, or a list endpoint answering 404) stops the turn.
+    if r.status != "ok":
         raise _Failed(r)
     return r
 

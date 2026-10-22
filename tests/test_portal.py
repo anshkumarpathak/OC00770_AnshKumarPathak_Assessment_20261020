@@ -104,6 +104,47 @@ def test_chaos_slider_gives_answers_or_honest_errors(app):
     app.slider(key="chaos_integration").set_value(0.0).run()
 
 
+def test_api_condition_applies_to_one_request_at_a_time(app):
+    app.sidebar.radio[0].set_value("SLA escalation agent").run()
+    # "normal" last: whatever a failing request didn't consume must not leak into the next one.
+    # A 404 from the ticket-queue list is a broken system, not a missing ticket: the agent stops.
+    for cond, want, retried in [("unavailable", "error", True), ("transient", "answered", True),
+                                ("not_found", "error", False), ("normal", "answered", False)]:
+        app.selectbox(key="cond_sla").set_value(cond).run()
+        app.button(key="step_sla_1").click().run()
+        assert not app.exception, app.exception
+        trace = load_traces()[-1]
+        assert trace["status"] == want, (cond, trace["answer"])
+        assert (sum(c["api_retries"] for c in trace["tool_calls"]) > 0) == retried, cond
+        assert trace["grounded"]
+    assert any("API condition: Unavailable" in str(c.value) for c in app.caption)
+
+
+def test_answers_show_their_source_records_and_budget(app):
+    app.sidebar.radio[0].set_value("SLA escalation agent").run()
+    app.button(key="step_sla_1").click().run()
+    assert any(e.label.startswith("Source records behind the citations") for e in app.expander)
+    assert any('"INC-2008"' in str(c.value) for c in app.code)
+    assert any("Budget used: 1 of 8 tool calls" in str(c.value) for c in app.caption)
+
+
+@pytest.mark.parametrize("page", list(EXPECTED))
+def test_task_tabs_and_edge_cases(app, page):
+    key = EXPECTED[page][0]
+    app.sidebar.radio[0].set_value(page).run()
+    assert [t.label for t in app.tabs] == ["Task 1 · Workflow", "Task 2 · Two APIs",
+                                           "Task 3 · Evidence and approval", "Task 4 · Tests"]
+    for i, want in ((1, "answered"), (2, "denied")):     # healthy record, then a missing one
+        app.button(key=f"edge_{key}_{i}").click().run()
+        assert not app.exception, app.exception
+        assert load_traces()[-1]["status"] == want, (page, i, load_traces()[-1]["answer"])
+
+
+def test_documents_can_be_downloaded(app):
+    docs = app.sidebar.get("download_button")
+    assert len(docs) >= 3, "expected the brief, the guide and the deck in the sidebar"
+
+
 @pytest.mark.parametrize("page", ["Approvals", "Monitoring", "Evaluation"])
 def test_other_pages_render(app, page):
     app.sidebar.radio[0].set_value("Integration failure agent").run()

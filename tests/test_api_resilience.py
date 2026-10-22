@@ -38,6 +38,20 @@ def test_gives_up_after_max_attempts():
         api_client.sap_client().request("GET", "/purchase-orders/PO-4501", PurchaseOrder)
 
 
+def test_rate_limit_is_retried_then_gives_up():
+    launcher.set_faults(launcher.SAP_URL, ["429", "429", "429"])
+    client = api_client.sap_client()
+    with pytest.raises(api_client.UpstreamUnavailable):
+        client.request("GET", "/invoices/INV-5101", Invoice)
+    assert client.calls[-1].errors == ["HTTP 429"] * 3
+
+
+def test_injected_not_found_maps_to_not_found():
+    launcher.set_faults(launcher.SAP_URL, ["404"])
+    with pytest.raises(api_client.NotFound):
+        api_client.sap_client().request("GET", "/invoices/INV-5101", Invoice)
+
+
 def test_malformed_payload_is_rejected_not_retried():
     launcher.set_faults(launcher.SAP_URL, ["malformed"])
     client = api_client.sap_client()

@@ -14,7 +14,7 @@ from typing import Callable
 from pydantic import BaseModel, ValidationError
 
 from support_agent import approvals, config, grounding, planner_llm, retrieval
-from support_agent.agent import SAFE_FALLBACK, AgentResponse, _status_from_tools
+from support_agent.agent import SAFE_FALLBACK, AgentResponse, _status_from_tools, cited_evidence
 from support_agent.api_client import ApiClient, ApiError, NotFound
 from support_agent.tools import ToolResult
 from support_agent.tracing import ToolCallRecord, Trace
@@ -50,7 +50,9 @@ class BaseExecutor:
     def execute(self, name: str, args: dict | None = None) -> ToolResult:
         args = args or {}
         t0, before = time.perf_counter(), {k: len(c.calls) for k, c in self.clients.items()}
-        if name in self.DENIED:
+        if why := self.trace.over_budget():
+            result = ToolResult("error", f"budget_exceeded: {why}")
+        elif name in self.DENIED:
             result = ToolResult("blocked", f"Action '{name}' is not permitted. {self.DENIED[name]}")
         elif name not in self.TOOLS:
             result = ToolResult("blocked", f"Unknown tool '{name}'.")
@@ -157,4 +159,4 @@ class BaseAgent:
             answer=answer, status=status, mode=self.mode, intent=intent, citations=trace.citations,
             trace_id=trace.trace_id, latency_ms=trace.latency_ms, tool_calls=[vars(c) for c in trace.tool_calls],
             approval_id=ex.approval_id, grounded=True, raw_grounded=raw_grounded,
-            ungrounded_facts=trace.ungrounded_facts)
+            ungrounded_facts=trace.ungrounded_facts, evidence=cited_evidence(trace.citations, ex.evidence))

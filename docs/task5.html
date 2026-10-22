@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OC00770 · Task 5 · Architecture, demo, monitoring and safeguards</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================================================ cover -->
+<div class="cover">
+  <div>
+    <p class="eyebrow">OC00770 · Individual assessment · Task 5</p>
+    <h1>Architecture, demo, monitoring dashboard and safeguards</h1>
+    <p class="sub">How four SAP support agents run, how a support lead watches them, and what stops them doing harm. Written for the kind of application management (AMS) work Orane Consulting delivers.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">4</div><div class="l">agents on one shared platform</div></div>
+      <div class="stat"><div class="n">6</div><div class="l">mock enterprise APIs, real HTTP</div></div>
+      <div class="stat"><div class="n">203</div><div class="l">scored test cases</div></div>
+      <div class="stat"><div class="n">0</div><div class="l">restricted actions executed</div></div>
+    </div>
+    <div class="panel">
+      <p class="eyebrow" style="color:#8DB8F2">Summary</p>
+      <p>The four agents (support desk, SLA escalation, change impact, integration failure) share one architecture: a planner proposes tool calls, a <b>guard layer in code</b> decides whether each one may run, and every risky action waits in an <b>approval queue</b> for a named person. Every turn is traced with personal data masked, and a <b>monitoring dashboard</b> shows latency, errors, blocked actions and citations per agent.</p>
+      <p style="margin:0">The demo portal is live at <a href="https://oc00770-sap-agents.streamlit.app"><b>oc00770-sap-agents.streamlit.app</b></a> and runs end to end on fictional data.</p>
+    </div>
+  </div>
+  <div class="meta">
+    <div><b>Ansh Kumar Pathak</b> · OC00770 · Software Engineer<br>October 2026 · mock data only</div>
+    <div style="text-align:right">Companion documents:<br>presentation deck · demo portal walkthrough</div>
+  </div>
+</div>
+
+<!-- ============================================================ at a glance -->
+<div class="section">
+  <p class="eyebrow">Task 5 at a glance</p>
+  <h2>A demo you can watch, and a way to stop it</h2>
+  <p class="lede">The assignment asks for an architecture, a demo, a monitoring dashboard and deployment safeguards. This page answers the five questions asked of every task; the rest of the document gives the detail.</p>
+  <table>
+    <tr><th style="width:22%">Question</th><th>Answer</th></tr>
+    <tr><td class="k">Problem</td><td>No client lets an AI agent near SAP if nobody can see what it did, why it did it, or switch it off. Support leads need the same visibility they have over human consultants.</td></tr>
+    <tr><td class="k">Approach</td><td>One shared platform for all four agents: a guard layer in code, one approval queue with a named approver per action, tracing of every turn with personal data masked, and a dashboard over those traces. Failure is designed in: the APIs can be made to fail on demand.</td></tr>
+    <tr><td class="k">Output</td><td>A working Streamlit portal (Home, four agent pages with guided walkthroughs, Approvals, Monitoring, Evaluation), hosted at a public URL; this architecture; and a safeguards plan for production.</td></tr>
+    <tr><td class="k">Testing</td><td>An automated portal test (<code>tests/test_portal.py</code>) drives every walkthrough, approval, reset and chaos mode for all four agents; the same flows were re-checked by hand on the public URL. <b>What could go wrong:</b> in production, errors could climb quietly while users keep trusting the answers. Designed response: an alert at 5% errors over 15 minutes and a per-agent kill switch back to human-only handling.</td></tr>
+    <tr><td class="k">Business value</td><td>The AMS lead sees what every agent did and why, the right person signs off every action, and the client gets an audit trail. That is what makes a pilot with a real client possible.</td></tr>
+  </table>
+
+  <h3>What is working, mocked or conceptual</h3>
+  <table>
+    <tr><th>Part</th><th style="width:30%">Status</th></tr>
+    <tr><td>Four agent workflows, guard layers, approval queue, citations, grounding check</td><td><span class="tag work">Working</span></td></tr>
+    <tr><td>Demo portal: Home, agent pages, Approvals, Monitoring, Evaluation</td><td><span class="tag work">Working</span> tested end to end</td></tr>
+    <tr><td>Hosted portal at oc00770-sap-agents.streamlit.app</td><td><span class="tag work">Working</span> public URL tested</td></tr>
+    <tr><td>Six enterprise APIs (FastAPI on localhost 8101–8106) with fault injection</td><td><span class="tag mock">Mocked</span> real HTTP, fake data</td></tr>
+    <tr><td>Clients, users, tickets, POs, invoices, contracts, changes, CMDB, interface messages</td><td><span class="tag mock">Mock data</span> all fictional</td></tr>
+    <tr><td>Nine support runbooks</td><td><span class="tag mock">Sample content</span> not Orane's documents</td></tr>
+    <tr><td>Claude Opus 5.5 as the planner for all four agents</td><td><span class="tag mock">Built, not run</span> no API key here</td></tr>
+    <tr><td>Single sign-on, secrets vault, alerting, kill switch, staged rollout</td><td><span class="tag idea">Conceptual</span> designed only</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ architecture -->
+<div class="section">
+  <p class="eyebrow">1 · Architecture</p>
+  <h2>One platform, one guard layer, four agents</h2>
+  <p class="lede">Each agent uses exactly two of the six enterprise APIs plus its own runbooks. Everything else is shared code, so a safeguard added once protects all four.</p>
+
+  <figure style="width:76%; margin-left:auto; margin-right:auto">
+  <svg viewBox="0 0 720 470" width="100%" role="img" aria-label="Architecture: people use the demo portal, which runs one agent per use case. The agent's planner proposes tool calls; a shared guard layer checks each one before the API client, retrieval or grounding check runs. Six mock enterprise APIs sit underneath. An approval queue and traces with audit log are shared by all agents." font-family="IBM Plex Sans, Arial, sans-serif">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563A8"/></marker>
+    </defs>
+    <!-- row A -->
+    <rect x="10" y="10" width="150" height="64" rx="8" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="22" y="32" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">People</text>
+    <text x="22" y="50" font-size="10.5" fill="#4A5462">Key users · duty lead</text>
+    <text x="22" y="64" font-size="10.5" fill="#4A5462">change mgr · consultants</text>
+    <line x1="162" y1="42" x2="194" y2="42" stroke="#2563A8" stroke-width="2" marker-end="url(#ar)"/>
+    <rect x="196" y="10" width="190" height="64" rx="8" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="208" y="32" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">Demo portal (Streamlit)</text>
+    <text x="208" y="50" font-size="10.5" fill="#4A5462">Home · four agent pages</text>
+    <text x="208" y="64" font-size="10.5" fill="#4A5462">Approvals · Monitoring · Evaluation</text>
+    <line x1="388" y1="42" x2="420" y2="42" stroke="#2563A8" stroke-width="2" marker-end="url(#ar)"/>
+    <rect x="422" y="10" width="288" height="64" rx="8" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="434" y="32" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">Agent (one per use case)</text>
+    <text x="434" y="50" font-size="10.5" fill="#4A5462">Planner proposes tool calls: rules (offline)</text>
+    <text x="434" y="64" font-size="10.5" fill="#4A5462">or Claude Opus 5.5 (built, not run here)</text>
+    <line x1="566" y1="76" x2="566" y2="102" stroke="#2563A8" stroke-width="2" marker-end="url(#ar)"/>
+    <!-- row B -->
+    <rect x="10" y="104" width="700" height="62" rx="8" fill="#1B2430"/>
+    <text x="24" y="127" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#F3F1EC">Guard layer · shared, in code, not in the prompt</text>
+    <text x="24" y="148" font-size="10.5" fill="#C9D1DB">Tool allowlist · denied tools · argument validation · data scoped to the user's client · business rules · trace of every call</text>
+    <line x1="165" y1="168" x2="165" y2="194" stroke="#2563A8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="427" y1="168" x2="427" y2="194" stroke="#2563A8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="622" y1="168" x2="622" y2="194" stroke="#2563A8" stroke-width="2" marker-end="url(#ar)"/>
+    <!-- row C -->
+    <rect x="10" y="196" width="310" height="74" rx="8" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="22" y="218" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">API client</text>
+    <text x="22" y="237" font-size="10.5" fill="#4A5462">Schema validation on every response · 1 s timeout</text>
+    <text x="22" y="252" font-size="10.5" fill="#4A5462">3 attempts on 5xx / timeouts, backoff 0.2 s → 0.4 s</text>
+    <text x="22" y="264" font-size="10.5" fill="#4A5462">Idempotency-Key on every change</text>
+    <rect x="340" y="196" width="175" height="74" rx="8" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="352" y="218" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">Retrieval</text>
+    <text x="352" y="237" font-size="10.5" fill="#4A5462">BM25 search over the</text>
+    <text x="352" y="252" font-size="10.5" fill="#4A5462">9 runbooks; weak matches</text>
+    <text x="352" y="264" font-size="10.5" fill="#4A5462">are declined, not used</text>
+    <rect x="535" y="196" width="175" height="74" rx="8" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="547" y="218" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">Grounding check</text>
+    <text x="547" y="237" font-size="10.5" fill="#4A5462">Every ID, date, amount</text>
+    <text x="547" y="252" font-size="10.5" fill="#4A5462">and duration must appear</text>
+    <text x="547" y="264" font-size="10.5" fill="#4A5462">in what the tools returned</text>
+    <line x1="165" y1="272" x2="165" y2="298" stroke="#2563A8" stroke-width="2" marker-end="url(#ar)"/>
+    <!-- row D: six APIs -->
+    <g font-size="11" fill="#1B2430">
+      <rect x="10"  y="300" width="110" height="50" rx="7" fill="#FBF1E7" stroke="#EBCFB4"/>
+      <text x="65"  y="322" text-anchor="middle" font-weight="600">Service desk</text><text x="65" y="338" text-anchor="middle" font-size="9.5" fill="#8A420A">ITSM tickets</text>
+      <rect x="128" y="300" width="110" height="50" rx="7" fill="#FBF1E7" stroke="#EBCFB4"/>
+      <text x="183" y="322" text-anchor="middle" font-weight="600">SAP S/4HANA</text><text x="183" y="338" text-anchor="middle" font-size="9.5" fill="#8A420A">POs · invoices · users</text>
+      <rect x="246" y="300" width="110" height="50" rx="7" fill="#FBF1E7" stroke="#EBCFB4"/>
+      <text x="301" y="322" text-anchor="middle" font-weight="600">Contracts</text><text x="301" y="338" text-anchor="middle" font-size="9.5" fill="#8A420A">SLA rules</text>
+      <rect x="364" y="300" width="110" height="50" rx="7" fill="#FBF1E7" stroke="#EBCFB4"/>
+      <text x="419" y="322" text-anchor="middle" font-weight="600">Change mgmt</text><text x="419" y="338" text-anchor="middle" font-size="9.5" fill="#8A420A">CRs · assessments</text>
+      <rect x="482" y="300" width="110" height="50" rx="7" fill="#FBF1E7" stroke="#EBCFB4"/>
+      <text x="537" y="322" text-anchor="middle" font-weight="600">CMDB</text><text x="537" y="338" text-anchor="middle" font-size="9.5" fill="#8A420A">objects · interfaces</text>
+      <rect x="600" y="300" width="110" height="50" rx="7" fill="#FBF1E7" stroke="#EBCFB4"/>
+      <text x="655" y="322" text-anchor="middle" font-weight="600">Integration</text><text x="655" y="338" text-anchor="middle" font-size="9.5" fill="#8A420A">message monitor</text>
+    </g>
+    <text x="360" y="368" text-anchor="middle" font-size="10" fill="#6A7280">Six mock enterprise APIs · FastAPI on localhost 8101–8106 · faults on demand: HTTP 500/503, slow replies, malformed data</text>
+    <!-- row E -->
+    <text x="10" y="392" font-size="9" font-weight="600" letter-spacing="1.4" fill="#2563A8">SHARED BY ALL FOUR AGENTS</text>
+    <rect x="10" y="400" width="345" height="62" rx="8" fill="#EEF3FA" stroke="#C9D9EE"/>
+    <text x="22" y="421" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">Approval queue</text>
+    <text x="22" y="439" font-size="10.5" fill="#4A5462">Proposed actions wait for the named approver; on</text>
+    <text x="22" y="453" font-size="10.5" fill="#4A5462">approval a handler runs it once, via the API client</text>
+    <rect x="365" y="400" width="345" height="62" rx="8" fill="#EEF3FA" stroke="#C9D9EE"/>
+    <text x="377" y="421" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">Traces and audit log</text>
+    <text x="377" y="439" font-size="10.5" fill="#4A5462">Every turn, block and decision recorded, personal</text>
+    <text x="377" y="453" font-size="10.5" fill="#4A5462">data masked; feeds Monitoring and Approvals</text>
+  </svg>
+  <figcaption>Figure 1 · Request path from top to bottom. The planner can only <i>propose</i>; the guard layer decides. Mock APIs: <code>mock_apis/</code> · portal: <code>dashboard/</code>.</figcaption>
+  </figure>
+
+  <div class="callout"><p><b>Design principle: safety lives in code, not in the prompt.</b> A confused or manipulated planner, rules or LLM, can ask for something unsafe, but it cannot make it happen: the guard layer refuses tools outside the agent's allowlist, and the APIs only accept changes through approved actions.</p></div>
+
+  <h3>Components and where they live</h3>
+  <table>
+    <tr><th style="width:24%">Component</th><th>What it does</th><th style="width:30%">Files</th></tr>
+    <tr><td class="k">Agents</td><td>One per use case. Classify the request, run the planner, collect evidence, draft a cited answer.</td><td><code>support_agent/agent.py</code>, <code>agents/sla.py</code>, <code>change.py</code>, <code>integration.py</code></td></tr>
+    <tr><td class="k">Planners</td><td>Rule-based (default, offline, repeatable) or Claude Opus 5.5 with a manual tool-use loop; both use the same tools and guards.</td><td><code>planner_rules.py</code>, <code>planner_llm.py</code></td></tr>
+    <tr><td class="k">Guard layer</td><td>Allowlist, denied tools, argument validation, data scoping, tracing of every tool call.</td><td><code>agents/base.py</code>, <code>support_agent/tools.py</code></td></tr>
+    <tr><td class="k">API client</td><td>Timeouts, retries with backoff, schema validation, idempotency keys, typed errors.</td><td><code>support_agent/api_client.py</code>, <code>schemas.py</code></td></tr>
+    <tr><td class="k">Retrieval and grounding</td><td>Runbook search with a minimum score; facts in the answer checked against the evidence.</td><td><code>retrieval.py</code>, <code>grounding.py</code>, <code>kb/</code></td></tr>
+    <tr><td class="k">Approval queue</td><td>Pending actions with their approver; handlers execute on approval; audit log.</td><td><code>agents/actions.py</code>, <code>support_agent/approvals.py</code></td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ one request -->
+<div class="section">
+  <p class="eyebrow">2 · One request, end to end</p>
+  <h2>“Escalate all breached tickets”</h2>
+  <p class="lede">Step 3 of the SLA walkthrough shows every part of the architecture in one turn: two APIs, a business rule, a citation, an approval and a change that lands only after a person says yes.</p>
+  <ol class="steps">
+    <li><b>Understand.</b> The duty lead's message is classified as an escalation request.</li>
+    <li><b>Plan.</b> The planner proposes <code>sla_overview</code> and then <code>draft_escalation</code>.</li>
+    <li><b>Guard.</b> Both tools are on the SLA agent's allowlist and their arguments validate. A tool such as <code>change_ticket_priority</code> would be refused here and logged as <i>blocked</i>.</li>
+    <li><b>Call the APIs.</b> The API client reads the open tickets from the service desk and the SLA rules from the contracts API. Each response is validated against its schema; a 503 or a timeout is retried up to three times.</li>
+    <li><b>Apply the business rule in code.</b> Deadline = opened time + the contract's resolution hours. Only breached or at-risk tickets may be escalated, and only one escalation per ticket can be pending.</li>
+    <li><b>Draft, don't send.</b> <code>draft_escalation</code> creates action ACT-0001 in the approval queue, addressed to the AMS delivery manager.</li>
+    <li><b>Cite and check.</b> The answer cites <code>[approval:ACT-0001]</code> and the escalation procedure. The grounding check confirms every ticket ID in the answer came from the tools.</li>
+    <li><b>Trace.</b> The turn is written to the trace log with its status (<i>pending_approval</i>), latency and tool calls, personal data masked.</li>
+    <li><b>Approve.</b> The delivery manager clicks Approve. The handler sends the escalation through the API client with the action ID as its Idempotency-Key, so a retry can't send it twice.</li>
+    <li><b>See the effect.</b> ESC-001 appears in the service desk's escalation list in the live view, and the decision lands in the audit log.</li>
+  </ol>
+
+  <h3>When something fails</h3>
+  <table>
+    <tr><th style="width:28%">Failure</th><th>What the platform does</th><th style="width:22%">What the user sees</th></tr>
+    <tr><td class="k">HTTP 429 / 5xx, timeout</td><td>Retried up to 3 attempts with backoff (0.2 s, 0.4 s, with jitter), 1 s timeout per call.</td><td>Usually nothing; Monitoring counts the retry</td></tr>
+    <tr><td class="k">Still failing</td><td>Raised as <code>UpstreamUnavailable</code>; the agent stops instead of guessing.</td><td>“I can't reach … I won't guess”</td></tr>
+    <tr><td class="k">Malformed data</td><td>Schema validation fails; <b>not</b> retried, because the contract is broken.</td><td>Honest error, status <i>error</i></td></tr>
+    <tr><td class="k">Not found / rejected</td><td>Typed errors (<code>NotFound</code>, <code>Rejected</code>) become a clear, cited refusal.</td><td>Status <i>denied</i></td></tr>
+    <tr><td class="k">Retry after a timeout on a change</td><td>The Idempotency-Key makes the API apply the change once.</td><td>One unlock, one escalation</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ demo -->
+<div class="section">
+  <p class="eyebrow">3 · The demo</p>
+  <h2>A guided demo portal for all four agents</h2>
+  <p class="lede">Every agent page carries a six-step walkthrough that tells one story: look something up, explain it, propose an action, approve it, then show a business rule and a restricted action saying no.</p>
+  <table>
+    <tr><th style="width:22%">Page</th><th>What it shows</th></tr>
+    <tr><td class="k">Home</td><td>The four agents as cards: problem, what it does, its two APIs, who approves, what it never does, and its test scores.</td></tr>
+    <tr><td class="k">Agent pages (×4)</td><td>Workflow strip, six walkthrough steps, chat with citations and a “Sources and tool calls” panel, the approval panel, a live view read straight from the mock systems, and a chaos slider.</td></tr>
+    <tr><td class="k">Approvals</td><td>Everything waiting for a person across all agents, decided actions with their result, and the audit log.</td></tr>
+    <tr><td class="k">Monitoring</td><td>The operations dashboard over the traces, filterable by agent (section 4).</td></tr>
+    <tr><td class="k">Evaluation</td><td>The latest test-set scores per agent: development, held-out and blind sets.</td></tr>
+  </table>
+  <figure>
+    <img src="img/02_sla_page.png" alt="SLA escalation agent page with the workflow strip, walkthrough steps, approval panel and live view">
+    <figcaption>Figure 2 · The SLA escalation agent page on the public URL, before the walkthrough starts.</figcaption>
+  </figure>
+  <p class="small">The companion <b>Demo portal walkthrough</b> PDF covers every page and step with screenshots.</p>
+</div>
+
+<div class="section">
+  <p class="eyebrow">3 · The demo, continued</p>
+  <h2>The same six-step story on every agent page</h2>
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:22%">Step</th><th>SLA escalation example</th><th style="width:26%">What it proves</th></tr>
+    <tr><td>1</td><td class="k">Look up</td><td>Which tickets are at risk? Two breached, two at risk, each cited.</td><td>Two APIs, rules computed in code</td></tr>
+    <tr><td>2</td><td class="k">Explain</td><td>INC-2003: deadline 14:00, 4 hours left, and the contract rule behind it.</td><td>Reasons, not just lists</td></tr>
+    <tr><td>3</td><td class="k">Propose, then approve</td><td>Escalate all breached tickets: ACT-0001 waits; the delivery manager approves; ESC-001 appears.</td><td>A person signs off every action</td></tr>
+    <tr><td>4</td><td class="k">A business rule says no</td><td>Escalate INC-2004: refused, it is on track.</td><td>Rules enforced in code</td></tr>
+    <tr><td>5</td><td class="k">A restricted action</td><td>Lower INC-2007 to P4: blocked by the guard layer.</td><td>SLA gaming is impossible</td></tr>
+    <tr><td>6</td><td class="k">Knowledge</td><td>Premium P1 resolution time, answered from the contract.</td><td>Cited retrieval</td></tr>
+  </table>
+  <div class="shot-row" style="grid-template-columns: 1fr 1fr 1.25fr">
+    <figure><img src="img/05_sla_pending.png" alt="Escalation ACT-0001 waiting for approval"><figcaption>Figure 3a · Step 3: the escalation waits for the delivery manager. Nothing has been sent.</figcaption></figure>
+    <figure><img src="img/06_sla_approved.png" alt="Live view showing ESC-001 after approval"><figcaption>Figure 3b · After Approve: ESC-001 appears in the service desk.</figcaption></figure>
+    <figure><img src="img/07_sla_refused_blocked.png" alt="Steps 4 and 5: denied and blocked"><figcaption>Figure 3c · Steps 4 and 5: refused by a business rule, then blocked by the guard layer.</figcaption></figure>
+  </div>
+  <div class="callout"><p><b>Why the live view matters:</b> it reads the mock systems directly, not the agent's own account of what it did. The audience sees that nothing changes until the approver clicks, and that the change which lands is exactly the one that was approved.</p></div>
+</div>
+
+<!-- ============================================================ monitoring -->
+<div class="section">
+  <p class="eyebrow">4 · Monitoring dashboard</p>
+  <h2>What a support lead watches</h2>
+  <p class="lede">The Monitoring page is built from the trace of every turn. It answers three questions: is it working, is it safe, and is it being honest?</p>
+  <figure>
+    <div class="crop" style="height:76mm"><img src="img/20_monitoring.png" alt="Monitoring dashboard with metric tiles, outcomes, latency per turn and tool calls by result"></div>
+    <figcaption>Figure 4 · Monitoring on the public URL for all agents, after a full demo run. The agent filter narrows every tile and chart to one agent. Below the tiles: outcomes, latency per turn, tool calls by result, API errors seen before retries, and recent turns with trace IDs that match the ID under each answer.</figcaption>
+  </figure>
+  <table>
+    <tr><th style="width:17%">Metric</th><th>Meaning</th><th style="width:30%">Why it matters</th></tr>
+    <tr><td class="k">Turns</td><td>Requests handled in the selected period.</td><td>Adoption</td></tr>
+    <tr><td class="k">Latency p50 / p95</td><td>Median and 95th-percentile response time per turn.</td><td>User experience; alert above 8 s p95</td></tr>
+    <tr><td class="k">Error rate</td><td>Share of turns where a system failure was handed over honestly.</td><td>Health of the enterprise APIs; alert above 5% over 15 min</td></tr>
+    <tr><td class="k">Blocked</td><td>Unsafe tool calls stopped by the guard layer.</td><td>Misuse or a confused planner</td></tr>
+    <tr><td class="k">Guard hits</td><td>Answers withheld because a fact wasn't in the evidence.</td><td>Hallucination caught; any hit should alert</td></tr>
+    <tr><td class="k">Approvals</td><td>Actions and role requests waiting for a person.</td><td>Work stuck with approvers; alert after 4 h</td></tr>
+    <tr><td class="k">Retries</td><td>API calls retried after errors.</td><td>Early warning before errors reach users</td></tr>
+    <tr><td class="k">Escalated · Declined</td><td>Tickets raised for an Orane consultant · questions no runbook covered.</td><td>Gaps in the runbooks</td></tr>
+    <tr><td class="k">Cited</td><td>Share of answers carrying at least one citation.</td><td>Answers users can check</td></tr>
+    <tr><td class="k">LLM tokens</td><td>Model input + output tokens (0 with the rules planner).</td><td>Running cost once Claude is on</td></tr>
+  </table>
+  <div class="callout warn"><p><b>Alert thresholds (designed, not wired to a pager):</b> error rate above 5% over 15 minutes, any guard hit, p95 latency above 8 seconds, approvals waiting more than 4 hours. In production these would go to the AMS duty lead's on-call channel.</p></div>
+</div>
+
+<!-- ============================================================ resilience -->
+<div class="section">
+  <p class="eyebrow">5 · Resilience, shown live</p>
+  <h2>The chaos slider: failure is part of the demo</h2>
+  <p class="lede">Each agent page has a <b>Chaos: API failure rate</b> slider from 0 to 0.8. It makes that agent's two mock APIs fail at the chosen rate with HTTP 500 or 503 errors, slow replies or malformed data. The live view is exempt, so the audience can still see the real state of the systems.</p>
+  <div class="shot-row" style="grid-template-columns: 1fr 1fr">
+    <figure><img src="img/08_sla_chaos.png" alt="Agent answering that it cannot reach a system and will not guess"><figcaption>Figure 5a · With chaos at 0.8 the service desk stopped answering. The agent says so and refuses to guess an SLA status.</figcaption></figure>
+    <figure><img src="img/08b_sla_chaos_sources.png" alt="Tool call table showing the service desk unavailable after 3 attempts"><figcaption>Figure 5b · Sources and tool calls: 3 attempts (2 retries) in under 2 seconds, then an honest “unavailable”. Malformed data, by contrast, is rejected by the schema check and never retried.</figcaption></figure>
+  </div>
+  <h3>What this proves</h3>
+  <ul>
+    <li><b>No silent failure.</b> A broken or slow system produces an honest “I can't reach it” instead of a confident wrong answer.</li>
+    <li><b>Retries are visible.</b> Temporary 5xx errors are retried; Monitoring shows the retries and the API errors seen, so a support lead spots a degrading system before users do.</li>
+    <li><b>Actions stay safe under failure.</b> Changes carry idempotency keys, so a retry after a timeout never applies an unlock, escalation or reprocessing twice.</li>
+  </ul>
+  <p>Automated tests cover the same failure paths: <code>tests/test_api_resilience.py</code> plus a fault-injection section in each agent's test file, and chaos mode in <code>tests/test_portal.py</code>.</p>
+</div>
+
+<!-- ============================================================ safeguards -->
+<div class="section">
+  <p class="eyebrow">6 · Safeguards</p>
+  <h2>Layered defence, built today and planned for go-live</h2>
+  <p class="lede">No single safeguard is trusted on its own. Each layer assumes the one before it might fail.</p>
+  <table>
+    <tr><th style="width:4%">#</th><th style="width:22%">Layer</th><th>What it stops</th><th style="width:16%">Status</th></tr>
+    <tr><td>1</td><td class="k">Tool allowlist</td><td>Each agent can only call its own tools; anything else is refused before any API is touched.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>2</td><td class="k">Denied tools</td><td>Payment-block release, bank details, production transports, SAP_ALL, closing or reprioritising tickets, approving changes, resending payment files. Requests for these, including prompt injection, are blocked and logged.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>3</td><td class="k">Argument validation</td><td>Malformed or out-of-range inputs, such as more than 50 messages in one reprocessing request.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>4</td><td class="k">Data scoping</td><td>Users see only their own company's data; another client's invoice is not shown.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>5</td><td class="k">Business rules in code</td><td>Escalating an on-track ticket, reprocessing before the vendor exists in SAP, reassessing an approved change, unlocking someone else's user.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>6</td><td class="k">Human approval</td><td>Every escalation, CAB submission, reprocessing run and role assignment waits for its named approver.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>7</td><td class="k">Idempotency</td><td>Double-applied changes after retries.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>8</td><td class="k">Grounding check</td><td>Answers containing an ID, date, amount or duration the tools didn't return are replaced with a safe fallback.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>9</td><td class="k">Masking and audit</td><td>E-mail addresses, card and phone numbers are masked in traces; every request, block and decision is in the audit log.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>10</td><td class="k">Single sign-on, role-based approvers</td><td>Approvers proven by identity, not chosen from a list as in the demo.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td>11</td><td class="k">Least-privilege technical users</td><td>Even a bug in the guard layer can't do more in SAP or the ITSM tool than each agent's two or three allowed changes.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td>12</td><td class="k">Secrets vault</td><td>API keys and system credentials never in code or config files.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td>13</td><td class="k">Alerts and kill switch</td><td>The thresholds in section 4; one switch per agent back to human-only handling.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td>14</td><td class="k">Staged rollout and regression tests</td><td>Shadow mode first, then one client, then all; the test sets re-run on every change before release.</td><td><span class="tag idea">Designed</span></td></tr>
+  </table>
+  <div class="callout"><p><b>Evidence:</b> across all 203 scored test cases, no restricted action took effect, and the guard layers stopped 44 unsafe attempts. Every accuracy miss failed safe.</p></div>
+</div>
+
+<!-- ============================================================ results, limits, run -->
+<div class="section">
+  <p class="eyebrow">7 · Results, limitation and recommendation</p>
+  <h2>Always safe, accurate on familiar wording</h2>
+  <table>
+    <tr><th>Agent</th><th>Development</th><th>Blind</th><th>Made-up answers</th><th>Unsafe actions</th><th>p95 latency</th></tr>
+    <tr><td class="k">Support desk</td><td>98% of 57 <span class="small">(held-out 100% of 14)</span></td><td>75% of 20</td><td>0%</td><td>0</td><td>54 ms</td></tr>
+    <tr><td class="k">SLA escalation</td><td>100% of 23</td><td>40% of 15</td><td>0% dev · 7% blind</td><td>0</td><td>63 ms</td></tr>
+    <tr><td class="k">Change impact</td><td>96% of 22</td><td>40% of 15</td><td>0%</td><td>0</td><td>56 ms</td></tr>
+    <tr><td class="k">Integration failure</td><td>100% of 22</td><td>67% of 15</td><td>0%</td><td>0</td><td>65 ms</td></tr>
+  </table>
+  <p class="small">Development sets were tuned on, so they are optimistic. Blind sets were written by separate agents that saw only the data and runbooks, never the code, and were run once without tuning. Latency is for the offline rules planner; Claude would add model time.</p>
+
+  <div class="grid2" style="margin-top:4mm">
+    <div class="card"><div class="label">One limitation</div><h3>The offline planners only understand wording they were built for</h3><p>Blind accuracy was 40–75%. Phrases like “the 501 change” or “the Meridian store ticket” defeated them. Every miss failed safe, but a user without an answer still waits.</p></div>
+    <div class="card dark"><div class="label">One recommendation</div><h3>Switch on the Claude planner, starting with the SLA agent</h3><p>It is built and sits behind the same guard layers. The SLA agent only drafts, so it is the safest start. Pilot in shadow mode with one client, on anonymised real tickets, and go live only when it beats the blind scores with zero unsafe actions.</p></div>
+  </div>
+
+  <h3>Deployment and how to run it</h3>
+  <table>
+    <tr><th style="width:24%">Where</th><th>How</th></tr>
+    <tr><td class="k">Public URL</td><td><a href="https://oc00770-sap-agents.streamlit.app">oc00770-sap-agents.streamlit.app</a> on Streamlit Community Cloud. The mock APIs start inside the same app. It sleeps when idle; the first visit can take a minute.</td></tr>
+    <tr><td class="k">Local</td><td>Windows: <code>run_demo.bat</code> · macOS/Linux: <code>sh run_demo.sh</code> → http://localhost:8501</td></tr>
+    <tr><td class="k">Any Docker host</td><td><code>docker build -t oc00770-sap-agents .</code> then <code>docker run -p 8501:8501 oc00770-sap-agents</code></td></tr>
+    <tr><td class="k">Claude planner</td><td>Set <code>ANTHROPIC_API_KEY</code> as a host secret (never in the repository); the portal switches planner automatically.</td></tr>
+  </table>
+  <p class="small">Source code: github.com/anshkumarpathak/OC00770_AnshKumarPathak_Assessment_20261020 · Task 5 files: <code>dashboard/</code>, <code>support_agent/tracing.py</code>, <code>agents/actions.py</code>, <code>mock_apis/faults.py</code>, <code>Dockerfile</code>, <code>tests/test_portal.py</code>.</p>
+</div>
+
+</body>
+</html>

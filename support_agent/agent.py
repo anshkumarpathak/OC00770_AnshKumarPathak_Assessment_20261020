@@ -33,6 +33,11 @@ class AgentResponse:
     grounded: bool = True              # final answer (after guard)
     raw_grounded: bool = True          # planner's answer before the guard
     ungrounded_facts: list[str] = field(default_factory=list)
+    evidence: dict[str, str] = field(default_factory=dict)   # citation id -> the record it points to
+
+
+def cited_evidence(citations: list[str], evidence: dict[str, str]) -> dict[str, str]:
+    return {c: evidence[c] for c in citations if c in evidence}
 
 
 def _status_from_tools(trace: Trace, answer: str, approval_id: str | None) -> str:
@@ -84,4 +89,5 @@ class SupportAgent:
             trace_id=trace.trace_id, latency_ms=trace.latency_ms,
             tool_calls=[vars(c) for c in trace.tool_calls], approval_id=ex.approval_id,
             grounded=True, raw_grounded=raw_grounded, ungrounded_facts=trace.ungrounded_facts,
+            evidence=cited_evidence(trace.citations, ex.evidence),
         )

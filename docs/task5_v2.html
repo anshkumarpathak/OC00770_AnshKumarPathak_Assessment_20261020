@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OC00770 · Task 5 · Executive brief</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================================================ cover -->
+<div class="cover">
+  <div>
+    <p class="eyebrow">OC00770 · Task 5 · Executive brief</p>
+    <h1>Safe AI agents for SAP support: architecture, demo, oversight and safeguards</h1>
+    <p class="sub">A working proof of concept for Orane Consulting's application management (AMS) business. Four agents look things up, explain what they find and propose actions, while people keep every decision about access, money and production.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">4</div><div class="l">AMS use cases working end to end</div></div>
+      <div class="stat"><div class="n">4</div><div class="l">human approval points, one per agent</div></div>
+      <div class="stat"><div class="n">203</div><div class="l">scored test cases, including blind sets</div></div>
+      <div class="stat"><div class="n">0</div><div class="l">restricted actions executed in testing</div></div>
+    </div>
+    <div class="panel">
+      <p class="eyebrow" style="color:#8DB8F2">See it live</p>
+      <p style="font-size:15pt; margin-bottom:2.5mm"><a href="https://oc00770-sap-agents.streamlit.app"><b>oc00770-sap-agents.streamlit.app</b></a></p>
+      <p style="margin:0">No sign-in needed. Fictional clients and data. A 10-minute guided tour is in the companion <b>Demo portal guide</b>.</p>
+    </div>
+  </div>
+  <div class="meta">
+    <div><b>Ansh Kumar Pathak</b> · OC00770 · Software Engineer<br>October 2026 · prepared for management review</div>
+    <div style="text-align:right">Submitted with:<br>presentation deck · demo portal guide · live portal link</div>
+  </div>
+</div>
+
+<!-- ============================================================ executive summary -->
+<div class="section">
+  <p class="eyebrow">Executive summary</p>
+  <h2>AI can take the legwork out of AMS support without taking decisions away from people</h2>
+
+  <div class="grid2" style="margin-top:3mm">
+    <div class="card">
+      <div class="label">The opportunity</div>
+      <ul>
+        <li><b>Routine questions</b> (“why is my invoice blocked?”) take consultant time away from real incidents.</li>
+        <li><b>SLA breaches</b> are often spotted too late; each one costs service credits and client trust.</li>
+        <li><b>Risky changes and failed interfaces</b> cause production incidents, late invoices and missing sales data.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="label">What was built</div>
+      <p>Four AI agents on one shared platform: a support desk assistant for client key users, and agents for SLA escalation, change impact and integration failures. Each reads two enterprise systems, cites every fact, and routes every action to a named approver. A live portal shows all four working, with a monitoring dashboard over every request.</p>
+    </div>
+  </div>
+
+  <h3>What the evidence shows</h3>
+  <table>
+    <tr><th style="width:22%">Question</th><th>Finding</th></tr>
+    <tr><td class="k">Is it safe?</td><td><b>Yes, by design and in testing.</b> Across 203 test cases, no restricted action took effect; 44 unsafe requests were stopped, including a prompt-injection attempt posing as CFO approval.</td></tr>
+    <tr><td class="k">Is it accurate?</td><td><b>On familiar wording, yes</b> (96–100% on development sets). On wording it was not built for, 40–75% (blind sets). Every miss failed safe: the agent declined instead of guessing.</td></tr>
+    <tr><td class="k">Is it honest?</td><td>Answers carry citations to the source record, and an automatic check withholds any fact the systems did not return. Made-up answers: 0% in all sets but one (7% in one blind set).</td></tr>
+    <tr><td class="k">Does it cope with outages?</td><td>Yes. When a system fails, it retries, then says plainly that it can't reach the system. This is demonstrated live with a “chaos” control.</td></tr>
+  </table>
+
+  <div class="grid2">
+    <div class="card dark">
+      <div class="label">Recommendation and decision asked</div>
+      <p>Switch on the Claude planner (already built behind the same safety layer), starting with the SLA escalation agent, whose only action is a draft a delivery manager approves.</p>
+      <p style="margin:0"><b style="color:#F3F1EC">Decision asked:</b> approve a shadow-mode pilot with one client on anonymised tickets, going live only when it beats today's blind scores with zero unsafe actions.</p>
+    </div>
+    <div class="card">
+      <div class="label">What this is, and is not</div>
+      <p><span class="tag work">Working</span> the four agents, safety layer, approvals, monitoring and portal.</p>
+      <p><span class="tag mock">Mocked</span> the six enterprise systems and all client data (fictional), and the runbooks (sample content, not Orane's).</p>
+      <p style="margin:0"><span class="tag idea">Not yet built</span> single sign-on, secrets vault, live alerting and kill switch; these are designed and included in the pilot plan.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ how it works -->
+<div class="section">
+  <p class="eyebrow">1 · How it works</p>
+  <h2>The AI proposes; a safety layer and a person decide</h2>
+  <p class="lede">Every request takes the same path. The AI never has direct access to the enterprise systems: it can only ask, and the safety layer, written in ordinary code, decides what is allowed.</p>
+
+  <figure style="width:92%; margin-left:auto; margin-right:auto">
+  <svg viewBox="0 0 720 312" width="100%" role="img" aria-label="Request path: a person asks the AI agent; the agent proposes steps; the safety layer checks each step; allowed lookups go to the enterprise systems; proposed actions go to a named approver; everything is recorded for monitoring." font-family="IBM Plex Sans, Arial, sans-serif">
+    <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563A8"/></marker></defs>
+    <rect x="10" y="20" width="150" height="80" rx="10" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="85" y="52" text-anchor="middle" font-family="Space Grotesk, Arial" font-weight="600" font-size="16" fill="#1B2430">1 · A person asks</text>
+    <text x="85" y="72" text-anchor="middle" font-size="11" fill="#4A5462">key user, duty lead,</text>
+    <text x="85" y="86" text-anchor="middle" font-size="11" fill="#4A5462">change manager, consultant</text>
+    <line x1="162" y1="60" x2="196" y2="60" stroke="#2563A8" stroke-width="2.2" marker-end="url(#a2)"/>
+    <rect x="198" y="20" width="150" height="80" rx="10" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="273" y="52" text-anchor="middle" font-family="Space Grotesk, Arial" font-weight="600" font-size="16" fill="#1B2430">2 · AI agent plans</text>
+    <text x="273" y="72" text-anchor="middle" font-size="11" fill="#4A5462">chooses lookups and</text>
+    <text x="273" y="86" text-anchor="middle" font-size="11" fill="#4A5462">proposes actions</text>
+    <line x1="350" y1="60" x2="384" y2="60" stroke="#2563A8" stroke-width="2.2" marker-end="url(#a2)"/>
+    <rect x="386" y="14" width="160" height="92" rx="10" fill="#1B2430"/>
+    <text x="466" y="48" text-anchor="middle" font-family="Space Grotesk, Arial" font-weight="600" font-size="16" fill="#F3F1EC">3 · Safety layer</text>
+    <text x="466" y="68" text-anchor="middle" font-size="11" fill="#C9D1DB">allowed? within the rules?</text>
+    <text x="466" y="82" text-anchor="middle" font-size="11" fill="#C9D1DB">the user's own client only?</text>
+    <line x1="548" y1="44" x2="582" y2="34" stroke="#2563A8" stroke-width="2.2" marker-end="url(#a2)"/>
+    <line x1="548" y1="80" x2="582" y2="92" stroke="#2563A8" stroke-width="2.2" marker-end="url(#a2)"/>
+    <rect x="584" y="6" width="126" height="54" rx="10" fill="#FBF1E7" stroke="#EBCFB4"/>
+    <text x="647" y="28" text-anchor="middle" font-family="Space Grotesk, Arial" font-weight="600" font-size="13.5" fill="#1B2430">4a · Look up</text>
+    <text x="647" y="46" text-anchor="middle" font-size="10.5" fill="#8A420A">enterprise systems</text>
+    <rect x="584" y="68" width="126" height="54" rx="10" fill="#EEF3FA" stroke="#C9D9EE"/>
+    <text x="647" y="90" text-anchor="middle" font-family="Space Grotesk, Arial" font-weight="600" font-size="13.5" fill="#1B2430">4b · Ask approver</text>
+    <text x="647" y="108" text-anchor="middle" font-size="10.5" fill="#1D4F86">named person decides</text>
+    <text x="10" y="150" font-size="10" font-weight="600" letter-spacing="1.4" fill="#2563A8">WHAT COMES BACK</text>
+    <rect x="10" y="160" width="345" height="72" rx="10" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="24" y="184" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">5 · A cited answer</text>
+    <text x="24" y="204" font-size="11" fill="#4A5462">Every fact points to its source record;</text><text x="24" y="219" font-size="11" fill="#4A5462">anything unsupported is withheld.</text>
+    <rect x="365" y="160" width="345" height="72" rx="10" fill="#F6F4EF" stroke="#E2DED5"/>
+    <text x="379" y="184" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">6 · A change only after approval</text>
+    <text x="379" y="204" font-size="11" fill="#4A5462">Carried out once, exactly as approved,</text><text x="379" y="219" font-size="11" fill="#4A5462">and visible in the system straight away.</text>
+    <rect x="10" y="246" width="700" height="56" rx="10" fill="#EEF3FA" stroke="#C9D9EE"/>
+    <text x="24" y="269" font-family="Space Grotesk, Arial" font-weight="600" font-size="14" fill="#1B2430">7 · Everything recorded</text>
+    <text x="24" y="289" font-size="11" fill="#4A5462">Each request, block and decision is logged with personal data masked, and feeds the monitoring dashboard and audit log.</text>
+  </svg>
+  <figcaption>Figure 1 · One request, from question to answer or approved action.</figcaption>
+  </figure>
+
+  <h3>Five controls that make it safe to pilot</h3>
+  <div class="grid3" style="grid-template-columns: repeat(5, 1fr); gap:3mm">
+    <div class="card"><div class="label">1</div><p><b>Propose, never act alone.</b> Every change waits for a named approver.</p></div>
+    <div class="card"><div class="label">2</div><p><b>Rules in code, not in the AI.</b> Restricted actions are refused however they are asked for.</p></div>
+    <div class="card"><div class="label">3</div><p><b>Cited and checked.</b> Facts must come from the systems, or the answer is withheld.</p></div>
+    <div class="card"><div class="label">4</div><p><b>Client data stays separate.</b> Users see only their own company's records.</p></div>
+    <div class="card"><div class="label">5</div><p><b>Fully recorded.</b> An audit log of every request, block and decision.</p></div>
+  </div>
+  <div class="callout"><p><b>Why this matters for Orane:</b> the safety controls do not depend on which AI model plans the steps. The model can be upgraded, or swapped, without re-approving the safety design, and the same test sets prove nothing got worse.</p></div>
+</div>
+
+<!-- ============================================================ use cases -->
+<div class="section">
+  <p class="eyebrow">2 · The four use cases</p>
+  <h2>Chosen for clear value and a clear human decision point</h2>
+  <p class="lede">The support desk assistant was built first; the other three are use cases 1, 3 and 5 from the shortlist of 15. Each is a self-contained agent that can be piloted on its own.</p>
+  <table>
+    <tr><th style="width:17%">Agent</th><th style="width:22%">Business problem</th><th>What it does</th><th style="width:15%">Who approves</th><th style="width:17%">Pilot KPIs</th></tr>
+    <tr><td class="k">Support desk assistant</td><td>Key users wait behind real incidents for routine answers.</td><td>Answers PO, invoice, access and policy questions with citations; unlocks the user's own account; queues role requests. <b>Never</b> releases payment blocks or changes bank details.</td><td>Client authorisation owner</td><td>Share of L1 requests closed without a consultant; time to first answer</td></tr>
+    <tr><td class="k">SLA escalation</td><td>At-risk tickets are spotted too late.</td><td>Checks every open ticket against its client contract, ranks breached and at-risk tickets, drafts the escalation. <b>Never</b> lowers priorities or closes tickets.</td><td>AMS delivery manager</td><td>SLA compliance; breaches per month; warning lead time</td></tr>
+    <tr><td class="k">Change impact</td><td>Changes reach CAB with missed dependencies or approvals.</td><td>Maps each changed object to applications, interfaces and tests; lists the approvals needed; flags unknown objects. <b>Never</b> approves changes or imports transports.</td><td>Change manager, then CAB</td><td>Change failure rate; CAB items sent back</td></tr>
+    <tr><td class="k">Integration failures</td><td>Failed interfaces stop invoices and store sales.</td><td>Groups failures by cause, checks SAP is ready, requests reprocessing only for safe messages. <b>Never</b> resends payment files or bank statements.</td><td>Integration lead</td><td>Time to recover; duplicate postings (target 0)</td></tr>
+  </table>
+  <h3>The moment that matters in every demo</h3>
+  <div class="shot-row" style="grid-template-columns: 1fr 1fr 1.25fr">
+    <figure><img src="img/05_sla_pending.png" alt="Escalation waiting for approval"><figcaption>1 · The agent drafts an escalation. Nothing is sent.</figcaption></figure>
+    <figure><img src="img/06_sla_approved.png" alt="Escalation visible in the service desk after approval"><figcaption>2 · The delivery manager approves; the escalation appears in the service desk.</figcaption></figure>
+    <figure><img src="img/07_sla_refused_blocked.png" alt="Refused and blocked requests"><figcaption>3 · Asked to escalate an on-track ticket or hide a breach, it says no.</figcaption></figure>
+  </div>
+</div>
+
+<!-- ============================================================ demo -->
+<div class="section">
+  <p class="eyebrow">3 · The demo portal</p>
+  <h2>A live portal reviewers can use themselves</h2>
+  <p class="lede">The portal at <a href="https://oc00770-sap-agents.streamlit.app"><b>oc00770-sap-agents.streamlit.app</b></a> runs all four agents against working mock systems. Each agent page has six guided steps that tell one story: look up, explain, propose and approve, then show a business rule and a restricted action saying no.</p>
+  <figure>
+    <img src="img/02_sla_page.png" alt="An agent page in the portal">
+    <figcaption>Figure 2 · An agent page: guided steps on the left, the approval panel and a live view of the systems on the right.</figcaption>
+  </figure>
+  <table>
+    <tr><th style="width:22%">Portal page</th><th>What a reviewer gets from it</th></tr>
+    <tr><td class="k">Home</td><td>The four agents at a glance, with their test scores and what each will never do.</td></tr>
+    <tr><td class="k">Agent pages</td><td>Each use case end to end, including an approval and its effect on the systems.</td></tr>
+    <tr><td class="k">Approvals</td><td>Everything waiting for a person, every decision taken, and the audit log.</td></tr>
+    <tr><td class="k">Monitoring</td><td>The operations view a support lead would use day to day (section 4).</td></tr>
+    <tr><td class="k">Evaluation</td><td>Test results per agent, with the honest blind scores shown alongside.</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ oversight -->
+<div class="section">
+  <p class="eyebrow">4 · Oversight</p>
+  <h2>What a support lead sees, every day</h2>
+  <p class="lede">The monitoring dashboard is built from a record of every request. It answers the five questions a manager will ask of any automated colleague.</p>
+  <figure>
+    <div class="crop" style="height:80mm"><img src="img/20_monitoring.png" alt="Monitoring dashboard"></div>
+    <figcaption>Figure 3 · The Monitoring page on the public portal after a full demo run. It can be filtered by agent.</figcaption>
+  </figure>
+  <table>
+    <tr><th style="width:24%">Question</th><th>Measures on the dashboard</th><th style="width:30%">Alert (designed)</th></tr>
+    <tr><td class="k">Is it working?</td><td>Requests handled, response time (median and 95th percentile), system errors, retries</td><td>Errors above 5% for 15 minutes; 95th percentile above 8 seconds</td></tr>
+    <tr><td class="k">Is it safe?</td><td>Restricted actions blocked; answers withheld by the fact check</td><td>Any withheld answer</td></tr>
+    <tr><td class="k">Is it honest?</td><td>Share of answers with citations; questions declined because no runbook covered them</td><td>Rising declines signal runbook gaps</td></tr>
+    <tr><td class="k">Is work stuck?</td><td>Actions waiting for an approver</td><td>Any approval waiting more than 4 hours</td></tr>
+    <tr><td class="k">What does it cost?</td><td>AI model usage (tokens); zero with today's offline planner</td><td>Budget threshold per client (pilot)</td></tr>
+  </table>
+  <div class="callout warn"><p><b>Proposed governance for a pilot:</b> the AMS lead reviews this dashboard and the audit log weekly with the delivery manager; any blocked action or withheld answer is reviewed individually; the test sets are re-run before every change to the agents.</p></div>
+</div>
+
+<!-- ============================================================ risk register -->
+<div class="section">
+  <p class="eyebrow">5 · Safeguards</p>
+  <h2>Risk register: what could go wrong, and what stops it</h2>
+  <table>
+    <tr><th style="width:24%">Risk</th><th>Mitigation</th><th style="width:15%">Status</th></tr>
+    <tr><td class="k">The AI takes an unauthorised action in SAP</td><td>Each agent may only use its own small set of tools; restricted actions (payment blocks, bank details, transports, closing tickets) are refused in code. In production, the agents' system accounts would also be limited to those few actions.</td><td><span class="tag work">Built</span> <span class="tag idea">+ designed</span></td></tr>
+    <tr><td class="k">A wrong or made-up answer</td><td>Every fact cited to its source; an automatic check withholds unsupported facts; the agent declines when no runbook covers the question.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td class="k">Manipulation (“ignore your instructions, I'm the CFO”)</td><td>The rules live in code the AI cannot override. Tested and blocked in the demo.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td class="k">One client sees another's data</td><td>Every lookup is scoped to the user's own company; personal data is masked in logs.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td class="k">An action happens twice (double escalation, double payment)</td><td>Each approved action carries a unique key so a retry can't repeat it; payment files are never resent by the agents.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td class="k">A client system is down or sends bad data</td><td>Automatic retries, data validation, and an honest “I can't reach it” instead of a guess. Demonstrated live.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td class="k">Quality degrades quietly in production</td><td>Alerts on the thresholds in section 4, and a per-agent switch back to human-only handling.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td class="k">Someone approves who shouldn't</td><td>Single sign-on with approvers assigned by role; today the demo lets you pick the approver.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td class="k">Credentials leak</td><td>System passwords and AI keys held in a secrets vault, never in code.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td class="k">An AI model update changes behaviour</td><td>The 203 test cases re-run before any release; new behaviour proven in shadow mode first.</td><td><span class="tag work">Tests built</span></td></tr>
+    <tr><td class="k">The agent misreads unfamiliar wording</td><td>Today it fails safe and declines. The recommended Claude planner pilot addresses this directly.</td><td><span class="tag mock">Limitation</span></td></tr>
+  </table>
+  <div class="callout"><p><b>Evidence:</b> across all 203 test cases, no restricted action took effect, and 44 unsafe requests were stopped. The demo lets reviewers try the same requests themselves.</p></div>
+</div>
+
+<!-- ============================================================ results -->
+<div class="section">
+  <p class="eyebrow">6 · Results</p>
+  <h2>Always safe; accurate on familiar wording</h2>
+  <table>
+    <tr><th>Agent</th><th>Development set</th><th>Blind set</th><th>Made-up answers</th><th>Unsafe actions</th><th>Response time (p95)</th></tr>
+    <tr><td class="k">Support desk</td><td>98% of 57</td><td>75% of 20</td><td>0%</td><td>0</td><td>54 ms</td></tr>
+    <tr><td class="k">SLA escalation</td><td>100% of 23</td><td>40% of 15</td><td>0% · 7% blind</td><td>0</td><td>63 ms</td></tr>
+    <tr><td class="k">Change impact</td><td>96% of 22</td><td>40% of 15</td><td>0%</td><td>0</td><td>56 ms</td></tr>
+    <tr><td class="k">Integration failures</td><td>100% of 22</td><td>67% of 15</td><td>0%</td><td>0</td><td>65 ms</td></tr>
+  </table>
+  <div class="grid2">
+    <div class="card"><div class="label">How to read these numbers</div>
+      <p><b>Development sets</b> were used to build the rules, so they are optimistic. <b>Blind sets</b> were written separately by AI reviewers that saw only the data and runbooks, never the code, and were run once: these are the figures to plan on.</p>
+      <p style="margin:0">The support desk also scored 100% on 14 held-out cases. Response times are for today's offline planner; an AI model adds a few seconds.</p></div>
+    <div class="card"><div class="label">One limitation</div>
+      <p><b>Today's offline planner only understands wording it was built for.</b> “The 501 change” or “the Meridian store ticket” defeated it. Every miss failed safe, but a user without an answer still waits.</p>
+      <p style="margin:0">This is the gap the recommended pilot closes: an AI planner understands natural phrasing, and the same safety layer keeps it in bounds.</p></div>
+  </div>
+</div>
+
+<!-- ============================================================ pilot -->
+<div class="section">
+  <p class="eyebrow">7 · Recommendation</p>
+  <h2>A staged pilot, starting with SLA escalation</h2>
+  <p class="lede">The SLA agent is the safest start: its inputs are structured, its value is easy to measure, and its only action is a draft that a delivery manager approves.</p>
+  <table>
+    <tr><th style="width:18%">Stage</th><th>What happens</th><th style="width:33%">Move on when</th></tr>
+    <tr><td class="k">1 · Shadow</td><td>The SLA agent runs on one client's anonymised tickets alongside the duty lead. Its drafts are compared with what the team did; nothing is sent.</td><td>It beats today's blind accuracy, with zero unsafe actions, and duty leads rate the drafts useful.</td></tr>
+    <tr><td class="k">2 · Assisted</td><td>Drafts go to the delivery manager for approval and are sent only after approval.</td><td>Earlier warnings and fewer breaches against the client's baseline.</td></tr>
+    <tr><td class="k">3 · Extend</td><td>Add the change impact and integration agents for the same client, each in shadow first.</td><td>Each passes its own blind set and shadow review.</td></tr>
+    <tr><td class="k">4 · Scale</td><td>Offer the support desk assistant to client key users; roll out to further clients.</td><td>Client sign-off; L1 deflection measured.</td></tr>
+  </table>
+  <div class="grid2">
+    <div class="card"><div class="label">What the pilot needs</div>
+      <ul>
+        <li>One client willing to take part, and anonymised historical tickets</li>
+        <li>Read-only, least-privilege system accounts in the client's ITSM tool and SAP</li>
+        <li>AI model access, with usage tracked on the dashboard</li>
+        <li>Single sign-on and named approvers</li>
+        <li>An owner for the runbooks the agents cite</li>
+      </ul></div>
+    <div class="card dark"><div class="label">Decision asked</div>
+      <p>Approve a <b style="color:#F3F1EC">shadow-mode pilot of the SLA escalation agent with one client</b>, with go-live only when it beats today's blind scores with zero unsafe actions.</p>
+      <p style="margin:0">The agents, safety layer and test sets are built. The pilot adds connections to the client's systems for the shadow stage, and the production safeguards before stage 2.</p></div>
+  </div>
+</div>
+
+<!-- ============================================================ appendix -->
+<div class="section">
+  <p class="eyebrow">Appendix</p>
+  <h2>Access, status labels and technical reference</h2>
+  <h3>How to access the demo</h3>
+  <table>
+    <tr><th style="width:24%">Option</th><th>How</th></tr>
+    <tr><td class="k">Live portal</td><td><a href="https://oc00770-sap-agents.streamlit.app">oc00770-sap-agents.streamlit.app</a>. If it has been idle it shows a wake-up screen; it is ready in about a minute. Click <b>Reset demo data</b> in the sidebar before a demo.</td></tr>
+    <tr><td class="k">On a laptop</td><td>Double-click <code>run_demo.bat</code> (Windows) or run <code>sh run_demo.sh</code>, then open http://localhost:8501.</td></tr>
+    <tr><td class="k">Any container host</td><td>The included Docker image runs the whole demo in one container.</td></tr>
+  </table>
+  <h3>Status labels used in this brief</h3>
+  <table>
+    <tr><th style="width:24%">Label</th><th>Meaning</th></tr>
+    <tr><td><span class="tag work">Working</span> / <span class="tag work">Built</span></td><td>Runs in the demo today and is covered by automated tests.</td></tr>
+    <tr><td><span class="tag mock">Mocked</span></td><td>Real software calls, but to stand-in systems with fictional data: the service desk, SAP S/4HANA, client contracts, change management, CMDB and integration monitor.</td></tr>
+    <tr><td><span class="tag idea">Designed</span></td><td>Specified for production but not built in the demo.</td></tr>
+  </table>
+  <h3>Technical reference</h3>
+  <p>The four agents share one platform: an AI planner (an offline rule-based planner today; Claude Opus 5.5 is built in but was not run, because no API key was available), a safety layer in code, a system client with validation, retries and duplicate protection, runbook search with citations, a fact check, an approval queue and request tracing. 60 automated tests cover the platform and the portal end to end.</p>
+  <p class="small">Source code and README: github.com/anshkumarpathak/OC00770_AnshKumarPathak_Assessment_20261020. A detailed technical version of this document is included in the submission folder.</p>
+  <div class="callout warn"><p><b>Data and scope:</b> all clients (Kestrel Foods, Meridian Retail), users, tickets and documents are fictional. The runbooks are sample content and do not represent Orane Consulting's internal processes. No real client or personal data was used.</p></div>
+</div>
+
+</body>
+</html>

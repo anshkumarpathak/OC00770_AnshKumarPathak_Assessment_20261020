@@ -59,6 +59,14 @@ class Trace:
     llm_output_tokens: int = 0
     _t0: float = field(default_factory=time.perf_counter, repr=False)
 
+    def over_budget(self) -> str | None:
+        """Why the next tool call must not run, if this turn has used its step or time budget."""
+        if len(self.tool_calls) >= config.MAX_TOOL_STEPS:
+            return f"step budget used ({config.MAX_TOOL_STEPS} tool calls per request)"
+        if time.perf_counter() - self._t0 > config.TURN_BUDGET_S:
+            return f"time budget used ({config.TURN_BUDGET_S:.0f} s per request)"
+        return None
+
     def finish(self) -> None:
         self.latency_ms = round((time.perf_counter() - self._t0) * 1000, 1)
         self.question = redact(self.question)
