@@ -68,17 +68,17 @@
   <p class="eyebrow">1 · Map of the portal</p>
   <h2>Every agent page has the same layout</h2>
   <p class="lede">Learn one agent page and you can read all four. This is the SLA escalation agent before the walkthrough starts.</p>
-  <figure class="annot">
+  <figure class="annot" style="width:80%">
     <img src="img/02_sla_page.png" alt="Agent page layout with numbered areas">
-    <span class="pin" style="left:16%; top:33%">1</span>
-    <span class="pin" style="left:20.6%; top:55.9%">2</span>
-    <span class="pin" style="left:24.6%; top:24.3%">3</span>
-    <span class="pin" style="left:24.6%; top:32.8%">4</span>
-    <span class="pin" style="left:51.4%; top:29%">5</span>
-    <span class="pin" style="left:24.6%; top:43%">6</span>
-    <span class="pin" style="left:24.6%; top:80.2%">7</span>
-    <span class="pin" style="left:68%; top:30.7%">8</span>
-    <span class="pin" style="left:68%; top:54%">9</span>
+    <span class="pin" style="left:15%; top:27%">1</span>
+    <span class="pin" style="left:20.6%; top:42.3%">2</span>
+    <span class="pin" style="left:24.6%; top:18.4%">3</span>
+    <span class="pin" style="left:24.6%; top:29.2%">4</span>
+    <span class="pin" style="left:41.8%; top:26.3%">5</span>
+    <span class="pin" style="left:24.6%; top:36.8%">6</span>
+    <span class="pin" style="left:24.6%; top:85%">7</span>
+    <span class="pin" style="left:68%; top:27.7%">8</span>
+    <span class="pin" style="left:68%; top:53%">9</span>
   </figure>
   <table>
     <tr><th style="width:6%"></th><th style="width:26%">Area</th><th>What it is for</th></tr>
@@ -86,10 +86,10 @@
     <tr><td><span class="num">2</span></td><td class="k">Reset demo data</td><td>Back to the starting data for everyone. Use it before every demo.</td></tr>
     <tr><td><span class="num">3</span></td><td class="k">Workflow strip</td><td>The agent's steps in order. The orange box at the end is the person who must approve.</td></tr>
     <tr><td><span class="num">4</span></td><td class="k">Signed in as</td><td>Who is asking. On the support desk page you can switch between five key users from two clients to see data scoping.</td></tr>
-    <tr><td><span class="num">5</span></td><td class="k">Chaos slider</td><td>Makes this agent's two APIs fail at the chosen rate (section 7). Keep it at 0.00 for the walkthrough.</td></tr>
+    <tr><td><span class="num">5</span></td><td class="k">API condition · Random chaos</td><td>Makes this agent's two APIs fail: one chosen failure per request, or at random (section 7). Keep them at Normal and 0.00 for the walkthrough.</td></tr>
     <tr><td><span class="num">6</span></td><td class="k">Walkthrough steps</td><td>Six tested requests that tell the whole story. The grey note beside each says what it shows. Click them in order.</td></tr>
     <tr><td><span class="num">7</span></td><td class="k">Chat box</td><td>Ask your own question. Answers appear above it.</td></tr>
-    <tr><td><span class="num">8</span></td><td class="k">Waiting for approval</td><td>Actions the agent proposed, with Approve and Reject. “Approving as” shows the named approver.</td></tr>
+    <tr><td><span class="num">8</span></td><td class="k">Review before saving</td><td>Actions the agent proposed, as drafts to edit, approve exactly and apply. Mock writes start off. “Approving as” shows the named approver.</td></tr>
     <tr><td><span class="num">9</span></td><td class="k">Live view</td><td>Read straight from the mock systems. It changes only after an approval or a safe action, which proves nothing happened behind your back.</td></tr>
   </table>
 </div>
@@ -121,7 +121,7 @@
 <div class="section">
   <p class="eyebrow">3 · How to read an answer</p>
   <h2>Every answer carries its evidence</h2>
-  <div class="shot-row" style="grid-template-columns: 1.1fr 1fr; width:64%">
+  <div class="shot-row" style="grid-template-columns: 1.1fr 1fr; width:54%">
     <figure><img src="img/03_sla_step1.png" alt="Agent answer listing breached and at-risk tickets with citations"><figcaption>An answer: facts first, each followed by its citation in square brackets; the status line underneath.</figcaption></figure>
     <figure><img src="img/04_sla_sources.png" alt="Sources and tool calls panel"><figcaption>“Sources and tool calls”: where each citation came from, and every tool run, with the guard's decision (status), its time and any API retries.</figcaption></figure>
   </div>
@@ -184,9 +184,9 @@
     <tr><td>5</td><td>Import the CR-501 transport to production</td><td>🛡️ Blocked: the agent never imports transports.</td><td>Production stays with people</td></tr>
     <tr><td>6</td><td>Assess CR-505</td><td>Already approved, so it is not reassessed.</td><td>No rework on decided changes</td></tr>
   </table>
-  <div class="shot-row" style="grid-template-columns: 95mm 54mm">
+  <div class="shot-row" style="grid-template-columns: 74mm 64mm">
     <figure><img src="img/11_change_pending.png" alt="ACT-0002 waiting for the change manager"><figcaption>Step 3: the CAB submission waits for the change manager, with the approvals CR-502 needs.</figcaption></figure>
-    <figure><img src="img/12_change_live.png" alt="Live view: CR-502 assessed, IA-001 submitted"><figcaption>After Approve: CR-502 <i>assessed</i>, IA-001 submitted to CAB.</figcaption></figure>
+    <figure><div class="crop bottom" style="height:102mm"><img src="img/12_change_live.png" alt="Live view: CR-502 assessed, IA-001 submitted"></div><figcaption>After Approve: CR-502 <i>assessed</i>, IA-001 submitted to CAB.</figcaption></figure>
   </div>
 </div>
 
@@ -204,9 +204,9 @@
     <tr><td>5</td><td>Resend the payment file to the bank</td><td>🛡️ Blocked: payment files are never resent by support.</td><td>No double payments</td></tr>
     <tr><td>6</td><td>How do I fix a duplicate bank statement?</td><td>The runbook answer: never import it again; treasury confirms the duplicate.</td><td>Runbook retrieval, cited</td></tr>
   </table>
-  <div class="shot-row" style="grid-template-columns: 1.4fr 0.6fr">
+  <div class="shot-row" style="grid-template-columns: 1.45fr 0.55fr">
     <figure><div class="crop" style="height:112mm"><img src="img/13_integration_answers.png" alt="Answers to steps 1 to 3"></div><figcaption>Step 1: failures grouped by cause, each line cited, with what is ready to reprocess.</figcaption></figure>
-    <figure><img src="img/12_integration_live.png" alt="Live view after approval"><figcaption>After Approve: MSG-5004–5006 <i>reprocessed</i>; payment and bank-statement messages untouched.</figcaption></figure>
+    <figure><div class="crop bottom" style="height:112mm"><img src="img/12_integration_live.png" alt="Live view after approval"></div><figcaption>After Approve: MSG-5004–5006 <i>reprocessed</i>; payment and bank-statement messages untouched.</figcaption></figure>
   </div>
 </div>
 
@@ -225,8 +225,8 @@
     <tr><td>6</td><td>Why is INV-5103 blocked?</td><td>Not shown: the invoice belongs to another client.</td><td>Data scoping by client</td></tr>
   </table>
   <div class="shot-row" style="grid-template-columns: 1fr 1fr">
-    <figure><img src="img/11_support_pending.png" alt="APR-0001 waiting for the authorisation owner"><figcaption>Step 3: the role request waits for kestrel.auth.owner.</figcaption></figure>
-    <figure><img src="img/12_support_live.png" alt="SAP users after the unlock and role approval"><figcaption>After steps 2 and 3: ASHAV unlocked, with Z_MM_DISPLAY added.</figcaption></figure>
+    <figure><img src="img/11_support_pending.png" alt="APR-0001 waiting for the authorisation owner" style="width:74mm"><figcaption>Step 3: the role request waits for kestrel.auth.owner.</figcaption></figure>
+    <figure><div class="crop bottom" style="height:102mm"><img src="img/12_support_live.png" alt="SAP users after the unlock and role approval"></div><figcaption>After steps 2 and 3: ASHAV unlocked, with Z_MM_DISPLAY added.</figcaption></figure>
   </div>
 </div>
 
@@ -234,7 +234,7 @@
 <div class="section">
   <p class="eyebrow">7b · Chaos mode</p>
   <h2>Show what happens when a system fails</h2>
-  <p class="lede">Drag <b>Chaos: API failure rate</b> to the right on any agent page, then click step 1 again. The agent's two mock APIs now fail at that rate with HTTP 500/503 errors, slow replies or malformed data.</p>
+  <p class="lede">Drag <b>Random chaos</b> to the right (or pick an <b>API condition</b>) on any agent page, then click step 1 again. The agent's two mock APIs now fail at that rate with HTTP 500/503 errors, slow replies or malformed data.</p>
   <div class="shot-row" style="grid-template-columns: 0.55fr 1fr">
     <figure><img src="img/09_chaos_slider.png" alt="Chaos slider at 0"><figcaption>The slider: 0.00 (off) to 0.80.</figcaption></figure>
     <figure><img src="img/08_sla_chaos.png" alt="Agent refusing to guess when a system fails"><figcaption>At 0.80: the service desk stopped answering, so the agent says it can't assess the SLA and won't guess.</figcaption></figure>

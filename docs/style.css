@@ -89,3 +89,4 @@ ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: .
 .toc { columns: 2; column-gap: 8mm; padding-left: 5mm; }
 .small { font-size: 8.4pt; color: var(--faint); }
 .spacer { height: 3mm; }
+.crop.bottom { display: flex; flex-direction: column; justify-content: flex-end; }

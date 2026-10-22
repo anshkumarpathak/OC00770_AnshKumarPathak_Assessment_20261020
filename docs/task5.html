@@ -169,7 +169,7 @@
     <li><b>Draft, don't send.</b> <code>draft_escalation</code> creates action ACT-0001 in the approval queue, addressed to the AMS delivery manager.</li>
     <li><b>Cite and check.</b> The answer cites <code>[approval:ACT-0001]</code> and the escalation procedure. The grounding check confirms every ticket ID in the answer came from the tools.</li>
     <li><b>Trace.</b> The turn is written to the trace log with its status (<i>pending_approval</i>), latency and tool calls, personal data masked.</li>
-    <li><b>Approve.</b> The delivery manager clicks Approve. The handler sends the escalation through the API client with the action ID as its Idempotency-Key, so a retry can't send it twice.</li>
+    <li><b>Review and approve.</b> The delivery manager may edit the draft, saves the revision, and approves the exact text; the approval is bound to it by a hash and lapses after 5 minutes. With mock writes on, the handler sends the escalation, carrying that text, through the API client with the action ID as its Idempotency-Key, so a retry can't send it twice.</li>
     <li><b>See the effect.</b> ESC-001 appears in the service desk's escalation list in the live view, and the decision lands in the audit log.</li>
   </ol>
 
@@ -217,9 +217,9 @@
     <tr><td>6</td><td class="k">Knowledge</td><td>Premium P1 resolution time, answered from the contract.</td><td>Cited retrieval</td></tr>
   </table>
   <div class="shot-row" style="grid-template-columns: 1fr 1fr 1.25fr">
-    <figure><img src="img/05_sla_pending.png" alt="Escalation ACT-0001 waiting for approval"><figcaption>Figure 3a · Step 3: the escalation waits for the delivery manager. Nothing has been sent.</figcaption></figure>
-    <figure><img src="img/06_sla_approved.png" alt="Live view showing ESC-001 after approval"><figcaption>Figure 3b · After Approve: ESC-001 appears in the service desk.</figcaption></figure>
-    <figure><img src="img/07_sla_refused_blocked.png" alt="Steps 4 and 5: denied and blocked"><figcaption>Figure 3c · Steps 4 and 5: refused by a business rule, then blocked by the guard layer.</figcaption></figure>
+    <figure><div class="crop" style="height:66mm"><img src="img/05_sla_pending.png" alt="Escalation ACT-0001 waiting for approval"></div><figcaption>Figure 3a · Step 3: the escalation waits for the delivery manager. Nothing has been sent.</figcaption></figure>
+    <figure><div class="crop" style="height:66mm"><img src="img/06_sla_approved.png" alt="Live view showing ESC-001 after approval"></div><figcaption>Figure 3b · After Approve: ESC-001 appears in the service desk.</figcaption></figure>
+    <figure><div class="crop" style="height:66mm"><img src="img/07_sla_refused_blocked.png" alt="Steps 4 and 5: denied and blocked"></div><figcaption>Figure 3c · Steps 4 and 5: refused by a business rule, then blocked by the guard layer.</figcaption></figure>
   </div>
   <div class="callout"><p><b>Why the live view matters:</b> it reads the mock systems directly, not the agent's own account of what it did. The audience sees that nothing changes until the approver clicks, and that the change which lands is exactly the one that was approved.</p></div>
 </div>
@@ -253,7 +253,7 @@
 <div class="section">
   <p class="eyebrow">5 · Resilience, shown live</p>
   <h2>The chaos slider: failure is part of the demo</h2>
-  <p class="lede">Each agent page has a <b>Chaos: API failure rate</b> slider from 0 to 0.8. It makes that agent's two mock APIs fail at the chosen rate with HTTP 500 or 503 errors, slow replies or malformed data. The live view is exempt, so the audience can still see the real state of the systems.</p>
+  <p class="lede">Each agent page has an <b>API condition</b> picker for one specific failure per request (error then recovery, unavailable, timeout, malformed data, HTTP 429, HTTP 404) and a <b>Random chaos</b> slider from 0 to 0.8 that makes the agent's two mock APIs fail at random. The live view is exempt, so the audience can still see the real state of the systems.</p>
   <div class="shot-row" style="grid-template-columns: 1fr 1fr">
     <figure><img src="img/08_sla_chaos.png" alt="Agent answering that it cannot reach a system and will not guess"><figcaption>Figure 5a · With chaos at 0.8 the service desk stopped answering. The agent says so and refuses to guess an SLA status.</figcaption></figure>
     <figure><img src="img/08b_sla_chaos_sources.png" alt="Tool call table showing the service desk unavailable after 3 attempts"><figcaption>Figure 5b · Sources and tool calls: 3 attempts (2 retries) in under 2 seconds, then an honest “unavailable”. Malformed data, by contrast, is rejected by the schema check and never retried.</figcaption></figure>
@@ -279,7 +279,7 @@
     <tr><td>3</td><td class="k">Argument validation</td><td>Malformed or out-of-range inputs, such as more than 50 messages in one reprocessing request.</td><td><span class="tag work">Built</span></td></tr>
     <tr><td>4</td><td class="k">Data scoping</td><td>Users see only their own company's data; another client's invoice is not shown.</td><td><span class="tag work">Built</span></td></tr>
     <tr><td>5</td><td class="k">Business rules in code</td><td>Escalating an on-track ticket, reprocessing before the vendor exists in SAP, reassessing an approved change, unlocking someone else's user.</td><td><span class="tag work">Built</span></td></tr>
-    <tr><td>6</td><td class="k">Human approval</td><td>Every escalation, CAB submission, reprocessing run and role assignment waits for its named approver.</td><td><span class="tag work">Built</span></td></tr>
+    <tr><td>6</td><td class="k">Human approval</td><td>Every escalation, CAB submission, reprocessing run and role assignment waits for its named approver, who can revise the draft and approves the exact text (hash-bound, 5-minute expiry; mock writes off by default).</td><td><span class="tag work">Built</span></td></tr>
     <tr><td>7</td><td class="k">Idempotency</td><td>Double-applied changes after retries.</td><td><span class="tag work">Built</span></td></tr>
     <tr><td>8</td><td class="k">Grounding check</td><td>Answers containing an ID, date, amount or duration the tools didn't return are replaced with a safe fallback.</td><td><span class="tag work">Built</span></td></tr>
     <tr><td>9</td><td class="k">Masking and audit</td><td>E-mail addresses, card and phone numbers are masked in traces; every request, block and decision is in the audit log.</td><td><span class="tag work">Built</span></td></tr>

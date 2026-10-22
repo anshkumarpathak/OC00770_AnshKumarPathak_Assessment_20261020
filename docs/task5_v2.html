@@ -123,7 +123,7 @@
 
   <h3>Five controls that make it safe to pilot</h3>
   <div class="grid3" style="grid-template-columns: repeat(5, 1fr); gap:3mm">
-    <div class="card"><div class="label">1</div><p><b>Propose, never act alone.</b> Every change waits for a named approver.</p></div>
+    <div class="card"><div class="label">1</div><p><b>Propose, never act alone.</b> A named approver edits the draft and approves the exact text.</p></div>
     <div class="card"><div class="label">2</div><p><b>Rules in code, not in the AI.</b> Restricted actions are refused however they are asked for.</p></div>
     <div class="card"><div class="label">3</div><p><b>Cited and checked.</b> Facts must come from the systems, or the answer is withheld.</p></div>
     <div class="card"><div class="label">4</div><p><b>Client data stays separate.</b> Users see only their own company's records.</p></div>
@@ -146,9 +146,9 @@
   </table>
   <h3>The moment that matters in every demo</h3>
   <div class="shot-row" style="grid-template-columns: 1fr 1fr 1.25fr">
-    <figure><img src="img/05_sla_pending.png" alt="Escalation waiting for approval"><figcaption>1 · The agent drafts an escalation. Nothing is sent.</figcaption></figure>
-    <figure><img src="img/06_sla_approved.png" alt="Escalation visible in the service desk after approval"><figcaption>2 · The delivery manager approves; the escalation appears in the service desk.</figcaption></figure>
-    <figure><img src="img/07_sla_refused_blocked.png" alt="Refused and blocked requests"><figcaption>3 · Asked to escalate an on-track ticket or hide a breach, it says no.</figcaption></figure>
+    <figure><div class="crop" style="height:66mm"><img src="img/05_sla_pending.png" alt="Escalation waiting for approval"></div><figcaption>1 · The agent drafts an escalation. Nothing is sent.</figcaption></figure>
+    <figure><div class="crop" style="height:66mm"><img src="img/06_sla_approved.png" alt="Escalation visible in the service desk after approval"></div><figcaption>2 · The delivery manager approves; the escalation appears in the service desk.</figcaption></figure>
+    <figure><div class="crop" style="height:66mm"><img src="img/07_sla_refused_blocked.png" alt="Refused and blocked requests"></div><figcaption>3 · Asked to escalate an on-track ticket or hide a breach, it says no.</figcaption></figure>
   </div>
 </div>
 
@@ -164,7 +164,7 @@
   <table>
     <tr><th style="width:22%">Portal page</th><th>What a reviewer gets from it</th></tr>
     <tr><td class="k">Home</td><td>The four agents at a glance, with their test scores and what each will never do.</td></tr>
-    <tr><td class="k">Agent pages</td><td>Each use case end to end, including an approval and its effect on the systems.</td></tr>
+    <tr><td class="k">Agent pages</td><td>Each use case end to end: an editable draft, an approval of the exact text, and its effect on the systems. A record editor lets reviewers change the data and watch the answer follow it.</td></tr>
     <tr><td class="k">Approvals</td><td>Everything waiting for a person, every decision taken, and the audit log.</td></tr>
     <tr><td class="k">Monitoring</td><td>The operations view a support lead would use day to day (section 4).</td></tr>
     <tr><td class="k">Evaluation</td><td>Test results per agent, with the honest blind scores shown alongside.</td></tr>
@@ -204,6 +204,7 @@
     <tr><td class="k">An action happens twice (double escalation, double payment)</td><td>Each approved action carries a unique key so a retry can't repeat it; payment files are never resent by the agents.</td><td><span class="tag work">Built</span></td></tr>
     <tr><td class="k">A client system is down or sends bad data</td><td>Automatic retries, data validation, and an honest “I can't reach it” instead of a guess. Demonstrated live.</td><td><span class="tag work">Built</span></td></tr>
     <tr><td class="k">Quality degrades quietly in production</td><td>Alerts on the thresholds in section 4, and a per-agent switch back to human-only handling.</td><td><span class="tag idea">Designed</span></td></tr>
+    <tr><td class="k">An approval is reused for different words</td><td>Each approval is bound to the exact text by a fingerprint and lapses after 5 minutes; any edit needs a fresh approval. Mock writes start off, so a first click changes nothing.</td><td><span class="tag work">Built</span></td></tr>
     <tr><td class="k">Someone approves who shouldn't</td><td>Single sign-on with approvers assigned by role; today the demo lets you pick the approver.</td><td><span class="tag idea">Designed</span></td></tr>
     <tr><td class="k">Credentials leak</td><td>System passwords and AI keys held in a secrets vault, never in code.</td><td><span class="tag idea">Designed</span></td></tr>
     <tr><td class="k">An AI model update changes behaviour</td><td>The 203 test cases re-run before any release; new behaviour proven in shadow mode first.</td><td><span class="tag work">Tests built</span></td></tr>
