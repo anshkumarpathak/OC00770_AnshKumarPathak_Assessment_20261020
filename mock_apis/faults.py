@@ -13,7 +13,7 @@ import random
 import threading
 from collections import deque
 
-from fastapi import FastAPI, Request
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -63,8 +63,14 @@ class FaultInjector:
         return None
 
 
-def install(app: FastAPI, injector: FaultInjector, reset_fn) -> None:
-    """Add the fault middleware and the /_admin endpoints to an app."""
+def install(app: FastAPI, injector: FaultInjector, reset_fn, db: dict | None = None,
+            tables: tuple[str, ...] = ()) -> None:
+    """Add the fault middleware and the /_admin endpoints to an app.
+
+    `tables` names the collections in `db` that the portal's record editor may read
+    and replace one record at a time (the portal checks the new record against the
+    agent's schema first; Reset restores the original data).
+    """
 
     @app.middleware("http")
     async def inject_faults(request: Request, call_next):
@@ -95,6 +101,20 @@ def install(app: FastAPI, injector: FaultInjector, reset_fn) -> None:
         injector.configure(FaultConfig())
         reset_fn()
         return {"ok": True}
+
+    def _record_table(table: str, key: str) -> dict:
+        if table not in tables or key not in db[table]:
+            raise HTTPException(404, f"no editable record {table}/{key}")
+        return db[table]
+
+    @app.get("/_admin/records/{table}/{key}")
+    def read_record(table: str, key: str):
+        return _record_table(table, key)[key]
+
+    @app.put("/_admin/records/{table}/{key}")
+    def replace_record(table: str, key: str, record: dict = Body(...)):
+        _record_table(table, key)[key] = record
+        return record
 
     @app.get("/health")
     def health():

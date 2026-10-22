@@ -5,6 +5,7 @@ of each, approves step 3 on the agent's own page and confirms the change landed
 in the mock system. It also checks Home, Reset, Approvals, Monitoring and
 Evaluation render without errors.
 """
+import json
 from pathlib import Path
 
 import httpx
@@ -73,10 +74,17 @@ def test_walkthrough_end_to_end(app, page):
         if step == 3:
             assert nothing_landed(key), "the action took effect before approval"
             approve = [b for b in app.button if b.key and b.key.startswith(f"{key}_ok")]
-            assert approve, "no approval card on the agent page"
-            approve[0].click().run()
+            assert approve, "no review card on the agent page"
+            approve[0].click().run()                         # mock writes start off: approval only
+            assert not app.exception, app.exception
+            assert nothing_landed(key), "an approval with mock writes off changed the system"
+            app.toggle(key="writes_on").set_value(True).run()
+            apply = [b for b in app.button if b.key and b.key.startswith(f"{key}_apply")]
+            assert apply, "no Apply button for the approved text"
+            apply[0].click().run()
             assert not app.exception, app.exception
             assert landed(key), "approved action did not reach the mock system"
+            app.toggle(key="writes_on").set_value(False).run()
     assert len(app.chat_message) == 12                     # six questions, six answers
     leaked = [e.value for e in list(app.markdown) + list(app.code) if "pd.DataFrame" in str(e.value)]
     assert not leaked, f"source code rendered on the page: {leaked[:1]}"   # Streamlit 'magic' regression
@@ -84,12 +92,14 @@ def test_walkthrough_end_to_end(app, page):
 
 def test_reset_restores_the_starting_data(app):
     app.sidebar.radio[0].set_value("SLA escalation agent").run()
+    app.toggle(key="writes_on").set_value(True).run()
     app.button(key="step_sla_3").click().run()
-    [b for b in app.button if b.key and b.key.startswith("sla_ok")][0].click().run()
+    [b for b in app.button if b.key and b.key.startswith("sla_ok")][0].click().run()   # writes on: applied at once
     assert landed("sla")
     app.sidebar.button[0].click().run()                    # Reset demo data
     assert not app.exception and nothing_landed("sla")
     assert len(app.chat_message) == 0
+    assert app.toggle(key="writes_on").value is False      # back to the safe default
 
 
 def test_chaos_slider_gives_answers_or_honest_errors(app):
@@ -152,4 +162,37 @@ def test_other_pages_render(app, page):
     app.sidebar.radio[0].set_value(page).run()
     assert not app.exception, (page, app.exception)
     if page == "Approvals":
-        assert any(b.label == "Approve" for b in app.button)
+        assert any(b.label == "Approve exact text" for b in app.button)
+
+
+def test_review_before_saving_applies_the_revised_text(app):
+    app.sidebar.radio[0].set_value("SLA escalation agent").run()
+    app.button(key="step_sla_3").click().run()
+    draft = [t for t in app.text_area if t.key and t.key.startswith("sla_txt")][0]
+    revised = draft.value + "\nPlease call the Meridian service manager before noon."
+    draft.set_value(revised).run()
+    app.button(key=[b.key for b in app.button if b.key and b.key.startswith("sla_ok")][0]).click().run()
+    assert any("Save the revision first" in str(w.value) for w in app.warning), "unsaved edit was approved"
+    app.button(key=[b.key for b in app.button if b.key and b.key.startswith("sla_rev")][0]).click().run()
+    app.toggle(key="writes_on").set_value(True).run()
+    app.button(key=[b.key for b in app.button if b.key and b.key.startswith("sla_ok")][0]).click().run()
+    assert not app.exception, app.exception
+    sent = httpx.get(f"{launcher.URLS['service_desk']}/queue/escalations").json()
+    assert len(sent) == 1 and sent[0]["note"] == revised.strip(), "the escalation didn't carry the approved text"
+
+
+def test_record_editor_saves_valid_edits_and_rejects_bad_ones(app):
+    app.sidebar.radio[0].set_value("SLA escalation agent").run()
+    box = app.text_area(key="rec_text_sla_INC-2003")
+    record = json.loads(box.value)
+    box.set_value(json.dumps({**record, "priority": "P9"})).run()          # not a priority the schema allows
+    app.button(key="rec_save_sla").click().run()
+    assert any("AmsTicket" in str(e.value) and "priority" in str(e.value) for e in app.error)
+    assert httpx.get(f"{launcher.URLS['service_desk']}/queue/tickets/INC-2003").json()["priority"] == "P3"
+    box.set_value(json.dumps({**record, "priority": "P1"})).run()          # premium P1: 4 hours, long gone
+    app.button(key="rec_save_sla").click().run()
+    assert any("priority changed" in str(m.value) for m in app.success)
+    app.button(key="step_sla_2").click().run()                             # "Explain the risk on INC-2003"
+    assert "breached" in load_traces()[-1]["answer"], load_traces()[-1]["answer"]
+    app.sidebar.button[0].click().run()                                    # Reset restores the record
+    assert httpx.get(f"{launcher.URLS['service_desk']}/queue/tickets/INC-2003").json()["priority"] == "P3"

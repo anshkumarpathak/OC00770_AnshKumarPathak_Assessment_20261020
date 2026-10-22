@@ -33,12 +33,13 @@ def _load() -> None:
 
 
 _load()
-faults.install(app, injector, _load)
+faults.install(app, injector, _load, db=_db, tables=("invoices", "users", "vendors"))
 
 
 class RoleAssignment(BaseModel):
     role: str = Field(pattern=r"^[A-Z][A-Z0-9_]{2,30}$")
     approved_by: str = Field(min_length=3)
+    note: str = ""          # the exact text the approver approved
 
 
 def _get(table: str, key: str, label: str):
@@ -48,9 +49,9 @@ def _get(table: str, key: str, label: str):
     return copy.deepcopy(item)
 
 
-def _log(sap_user: str, change: str) -> dict:
+def _log(sap_user: str, change: str, note: str = "") -> dict:
     entry = {"change_id": f"CD{len(_db['change_log']) + 1:05d}", "sap_user": sap_user, "change": change,
-             "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+             "note": note, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     _db["change_log"].append(entry)
     return entry
 
@@ -106,7 +107,7 @@ def assign_role(sap_user: str, body: RoleAssignment, request: Request,
             raise HTTPException(404, f"SAP user {sap_user} not found")
         if body.role not in user["roles"]:
             user["roles"].append(body.role)
-        _log(sap_user, f"role {body.role} assigned, approved by {body.approved_by}")
+        _log(sap_user, f"role {body.role} assigned, approved by {body.approved_by}", body.note)
         result = copy.deepcopy(user)
         if idempotency_key:
             _db["idempotency"][idempotency_key] = result

@@ -48,6 +48,9 @@ BACKOFF_BASE_S = 0.2
 MAX_TOOL_STEPS = 8
 TURN_BUDGET_S = 10.0
 
+# Review before saving: an approval covers one exact text and lapses after this long if not applied.
+APPROVAL_TTL_S = 300
+
 # Retrieval: below these we treat the knowledge base as having no answer
 # (calibrated on the questions in evals/cases.jsonl)
 RETRIEVAL_MIN_SCORE = 2.0

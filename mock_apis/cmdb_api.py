@@ -22,7 +22,7 @@ def _load() -> None:
 
 
 _load()
-faults.install(app, injector, _load)
+faults.install(app, injector, _load, db=_db, tables=("objects",))
 
 
 @app.get("/objects/{name}")

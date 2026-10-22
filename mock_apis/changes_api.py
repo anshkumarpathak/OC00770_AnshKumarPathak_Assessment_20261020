@@ -26,13 +26,14 @@ def _load() -> None:
 
 
 _load()
-faults.install(app, injector, _load)
+faults.install(app, injector, _load, db=_db, tables=("changes",))
 
 
 class NewAssessment(BaseModel):
     summary: str = Field(min_length=10)
     approvals_needed: list[str]
     approved_by: str = Field(min_length=3)
+    note: str = ""          # the exact text the approver approved
 
 
 @app.get("/changes")

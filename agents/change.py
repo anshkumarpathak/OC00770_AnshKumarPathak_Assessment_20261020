@@ -166,7 +166,8 @@ def _submit(payload: dict, action_id: str, approver: str) -> dict:
 
     a = ApiClient(config.CHANGES_URL, "changes").request(
         "POST", f"/changes/{payload['cr_ids'][0]}/assessments", Assessment, idempotency_key=action_id,
-        json={"summary": payload["summary"], "approvals_needed": payload["approvals_needed"], "approved_by": approver})
+        json={"summary": payload["summary"], "approvals_needed": payload["approvals_needed"], "approved_by": approver,
+              "note": payload.get("note", "")})
     return {"assessment_id": a.assessment_id}
 
 

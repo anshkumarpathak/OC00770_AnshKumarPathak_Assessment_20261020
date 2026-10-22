@@ -211,7 +211,7 @@ def _reprocess(payload: dict, action_id: str, approver: str) -> dict:
 
     r = ApiClient(config.INTEGRATION_URL, "integration").request(
         "POST", "/messages/reprocess", Run, idempotency_key=action_id,
-        json={"msg_ids": payload["msg_ids"], "approved_by": approver})
+        json={"msg_ids": payload["msg_ids"], "approved_by": approver, "note": payload.get("note", "")})
     return {"run_id": r.run_id}
 
 

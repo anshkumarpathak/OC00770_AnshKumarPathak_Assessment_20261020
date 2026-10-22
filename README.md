@@ -83,7 +83,7 @@ On a host that sets `$PORT`, the image listens on it automatically.
 ```bash
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python -m pytest                                  # 72 tests, incl. the portal end to end
+.venv/Scripts/python -m pytest                                  # 86 tests, incl. the portal end to end
 .venv/Scripts/python evals/run_evals.py --agent support         # also: --agent sla | change | integration
 .venv/Scripts/python evals/run_evals.py --agent sla --cases blind
 .venv/Scripts/python demo_script.py                             # scripted demo of all four agents
@@ -157,8 +157,11 @@ planner (already built) behind the same guard layers, and test it on anonymised 
 1. Start the portal and click **Reset demo data** in the sidebar for a clean start.
 2. On **Home**, open an agent. Each agent page has six numbered walkthrough steps:
    - Steps 1–2 look up and explain, with citations.
-   - Step 3 proposes an action. It appears under **Waiting for approval** on the right; click **Approve**,
-     and the **Live view of the mock systems** shows the change land.
+   - Step 3 proposes an action. It appears under **Review before saving** on the right as an editable draft:
+     edit it if you like, **Save revision**, then **Approve exact text**. **Mock writes** start off, so the
+     approval is recorded but nothing changes; turn them on and click **Apply** within 5 minutes, and the **Live
+     view of the mock systems** shows the change land with the approved text. Editing after approval, or waiting
+     too long, needs a fresh approval.
    - Step 4 shows a business rule saying no.
    - Steps 5–6 show a restricted action being blocked and a runbook answer.
    - Two **edge cases** below the steps: a healthy record (nothing to do) and a missing one (it says so).
@@ -168,14 +171,19 @@ planner (already built) behind the same guard layers, and test it on anonymised 
 4. Pick an **API condition** (error then recovery, unavailable, timeout, malformed data, rate limited, not
    found) to show retries and honest "system unavailable" answers on demand; it applies to each request until
    you set it back to Normal. **Random chaos** does the same at random. The live view keeps working either way.
-5. Open **Assignment evidence** at the top of an agent page for its Tasks 1–4, test scores, business value and
+5. Open **Inspect or edit the source records** on an agent page, change a value (say INC-2003's priority to
+   P1) and save it, then re-run a step: the answer follows the data. An edit that breaks the agent's schema
+   (priority P9, a contract without a P4 rule, a blocked invoice with no reason) is rejected with the reason.
+   Reset demo data restores every record.
+6. Open **Assignment evidence** at the top of an agent page for its Tasks 1–4, test scores, business value and
    pilot KPIs.
-6. Finish on **Approvals** (every decision and the audit log), **Monitoring** (filter by agent) and
+7. Finish on **Approvals** (every decision and the audit log), **Monitoring** (filter by agent) and
    **Evaluation**. The sidebar has download buttons for the executive brief, the portal guide, the deck and the
    technical Task 5 document.
 
 `tests/test_portal.py` runs exactly this flow for all four agents, including reset, chaos mode, every API
-condition, the evidence viewer, the Task tabs, the edge cases and the downloads.
+condition, the evidence viewer, the Task tabs, the edge cases, the downloads, review before saving and the
+record editor.
 
 The PDFs are built from `docs/` with `python docs/build_pdfs.py` (needs Playwright and Google Chrome).
 

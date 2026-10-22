@@ -18,12 +18,15 @@ import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from agents import actions  # noqa: E402
-from agents.change import ChangeAgent  # noqa: E402
-from agents.integration import IntegrationAgent  # noqa: E402
-from agents.sla import SlaAgent  # noqa: E402
+from agents.change import ChangeAgent, ChangeRequest, CmdbObject  # noqa: E402
+from agents.integration import IntegrationAgent, Message  # noqa: E402
+from agents.sla import AmsTicket, Contract, SlaAgent  # noqa: E402
 from mock_apis import faults, launcher  # noqa: E402
 from support_agent import approvals, config, retrieval  # noqa: E402
 from support_agent.agent import SupportAgent  # noqa: E402
+from support_agent.records import check_record  # noqa: E402
+from support_agent.review import ReviewError, seconds_left  # noqa: E402
+from support_agent.schemas import Invoice, SapUser  # noqa: E402
 from support_agent.tracing import load_traces  # noqa: E402
 
 from widgets import bars, flow, line, table  # noqa: E402
@@ -168,6 +171,17 @@ CONDITION_LABELS = {
     "unavailable": "Unavailable (fails 3 times)", "timeout": "Timeout (too slow 3 times)",
     "malformed": "Malformed data", "rate_limited": "Rate limited (HTTP 429)", "not_found": "Record not found (HTTP 404)",
 }
+# Records a reviewer may inspect and edit per agent: (label, mock API, table, key, schema, key field).
+EDITABLE = {
+    "support": [("Invoice INV-5102", "sap", "invoices", "INV-5102", Invoice, "invoice_id"),
+                ("SAP user ASHAV", "sap", "users", "ASHAV", SapUser, "sap_user")],
+    "sla": [("Ticket INC-2003", "service_desk", "queue", "INC-2003", AmsTicket, "ticket_id"),
+            ("Contract CL02 · Meridian Retail", "contracts", "contracts", "CL02", Contract, "client_id")],
+    "change": [("Change request CR-502", "changes", "changes", "CR-502", ChangeRequest, "cr_id"),
+               ("CMDB object ZSD_PRICING_901", "cmdb", "objects", "ZSD_PRICING_901", CmdbObject, "object")],
+    "integration": [("Message MSG-5001", "integration", "messages", "MSG-5001", Message, "msg_id"),
+                    ("Message MSG-5004", "integration", "messages", "MSG-5004", Message, "msg_id")],
+}
 DOCUMENTS = [
     ("Executive brief", "OC00770_Task5_Executive_Brief_v2.pdf"),
     ("Demo portal guide", "OC00770_Demo_Portal_Guide_v2.pdf"),
@@ -206,13 +220,16 @@ def go(page: str) -> None:
 
 
 def reset_demo() -> None:
-    """Back to the starting data: mock systems, approval queues, chats, chaos sliders and API conditions."""
+    """Back to the starting data: mock systems, approval queues, chats, chaos sliders, API conditions, edited
+    records, and mock writes switched off."""
     launcher.reset_all()
     for queue in ("actions.json", "approvals.json"):
         (config.RUNTIME_DIR / queue).unlink(missing_ok=True)
     for k in list(st.session_state):
-        if k.startswith(("history_", "chaos_applied_", "pending_")):
+        if k.startswith(("history_", "chaos_applied_", "pending_", "rec_", "review_msg_")):
             del st.session_state[k]
+        elif k == "writes_on":
+            st.session_state[k] = False
         elif k.startswith("chaos_"):
             st.session_state[k] = 0.0
         elif k.startswith("cond_"):
@@ -227,7 +244,7 @@ def eval_summary(agent: str, case_set: str) -> dict | None:
 
 
 @st.cache_data
-def read_bytes(path: str) -> bytes:
+def read_bytes(path: str, mtime: float) -> bytes:   # mtime in the key: a pushed new version is served at once
     return Path(path).read_bytes()
 
 
@@ -254,7 +271,8 @@ with st.sidebar:
     if docs:
         st.markdown("**Documents**")
         for label, path in docs:
-            st.download_button(f"⬇ {label}", read_bytes(str(path)), file_name=path.name, mime="application/pdf",
+            st.download_button(f"⬇ {label}", read_bytes(str(path), path.stat().st_mtime), file_name=path.name,
+                               mime="application/pdf",
                                key=f"doc_{path.stem}", use_container_width=True)
 
 
@@ -279,82 +297,200 @@ def show_evidence(evidence: dict[str, str]) -> None:
             st.code(record, language=None, wrap_lines=True)
 
 
-def action_card(item: dict, approver: str, prefix: str) -> None:
+def run_review(fn, *args, done: str, msg_key: str) -> None:
+    """One review step from a card: show why it can't go ahead, or what happened, after the rerun."""
+    try:
+        fn(*args)
+        st.session_state.toast = done
+    except ReviewError as exc:
+        st.session_state[msg_key] = str(exc)
+        st.session_state.toast = str(exc)
+    except Exception as exc:   # upstream down: the item stays pending, nothing is lost
+        st.session_state.toast = f"Could not complete it: {exc}"
+    st.rerun()
+
+
+def approve_and_maybe_apply(queue, iid: str, draft: str, approver: str, writes: bool, msg_key: str) -> None:
+    try:
+        queue.approve_text(iid, draft, approver)
+        if writes:
+            queue.apply(iid, approver)
+            st.session_state.toast = f"{iid} approved and applied"
+        else:
+            st.session_state.toast = (f"{iid} approved. Mock writes are off: turn them on and apply within "
+                                      f"{config.APPROVAL_TTL_S // 60} minutes.")
+    except ReviewError as exc:
+        st.session_state[msg_key] = str(exc)
+        st.session_state.toast = str(exc)
+    except Exception as exc:   # upstream down: the approval stands, the item stays pending
+        st.session_state.toast = f"Approved, but applying {iid} failed: {exc}. Try Apply again."
+    st.rerun()
+
+
+def review_card(item: dict, approver: str, prefix: str) -> None:
+    """Review before saving: edit the draft, save a revision, approve the exact text, then apply it."""
+    is_role = "approval_id" in item
+    queue, iid = (approvals, item["approval_id"]) if is_role else (actions, item["action_id"])
+    writes = st.session_state.get("writes_on", False)
+    approved = bool(item.get("approval")) and seconds_left(item) > 0
+    msg_key = f"review_msg_{prefix}{iid}"
     with st.container(border=True):
-        st.markdown(f"**{item['action_id']}** · `{item['action']}`  \n{item['summary']}  \n"
-                    f"Approver: _{item['approver_role']}_ · requested by {item['requested_by']}")
-        c1, c2 = st.columns(2)
-        if c1.button("Approve", key=f"{prefix}ok{item['action_id']}", type="primary", use_container_width=True):
-            try:
-                done = actions.decide(item["action_id"], approver, approve=True)
-                st.session_state.toast = f"{done['action_id']} approved: {done.get('result')}"
-            except Exception as exc:   # upstream down: the item stays pending, nothing is lost
-                st.session_state.toast = f"Could not complete {item['action_id']}: {exc}"
-            st.rerun()
-        if c2.button("Reject", key=f"{prefix}no{item['action_id']}", use_container_width=True):
-            actions.decide(item["action_id"], approver, approve=False)
-            st.session_state.toast = f"{item['action_id']} rejected"
+        if is_role:
+            st.markdown(f"**{iid}** · `role request` · {item['user_id']} ({item['client_id']}) wants **{item['role']}** "
+                        f"on SAP user **{item['sap_user']}**  \nApprover: _client authorisation owner_")
+        else:
+            st.markdown(f"**{iid}** · `{item['action']}` · requested by {item['requested_by']}  \n"
+                        f"Approver: _{item['approver_role']}_")
+        draft = st.text_area("Draft: edit, save the revision, then approve the exact text",
+                             item.get("text") or item.get("summary", ""), key=f"{prefix}txt{iid}", height=120,
+                             disabled=approved)
+        if item.get("revisions"):
+            st.caption(f"Revised {len(item['revisions'])}× by the approver; every version is in the audit log.")
+        if note := st.session_state.pop(msg_key, None):
+            st.warning(note)
+        if approved:
+            m, sec = divmod(seconds_left(item), 60)
+            st.success(f"Approved by {item['approval']['by']} · fingerprint {item['approval']['hash'][:10]} · "
+                       f"lapses in {m}:{sec:02d} if not applied")
+            if not writes:
+                st.caption("Mock writes are off, so nothing has changed in the systems yet. Turn them on to apply.")
+            c1, c2, c3 = st.columns(3)
+            if c1.button("Apply", key=f"{prefix}apply{iid}", type="primary", disabled=not writes,
+                         use_container_width=True):
+                run_review(queue.apply, iid, approver, done=f"{iid} applied", msg_key=msg_key)
+            if c2.button("Withdraw", key=f"{prefix}wd{iid}", use_container_width=True):
+                run_review(queue.withdraw, iid, approver, done=f"Approval of {iid} withdrawn", msg_key=msg_key)
+        else:
+            c1, c2, c3 = st.columns(3)
+            if c1.button("Save revision", key=f"{prefix}rev{iid}", use_container_width=True):
+                run_review(queue.revise, iid, draft, approver, done=f"Revision of {iid} saved", msg_key=msg_key)
+            if c2.button("Approve exact text", key=f"{prefix}ok{iid}", type="primary", use_container_width=True):
+                approve_and_maybe_apply(queue, iid, draft, approver, writes, msg_key)
+        if c3.button("Reject", key=f"{prefix}no{iid}", use_container_width=True):
+            queue.decide(iid, approver, approve=False)
+            st.session_state.toast = f"{iid} rejected"
             st.rerun()
 
 
-def role_card(item: dict, approver: str, prefix: str) -> None:
-    with st.container(border=True):
-        st.markdown(f"**{item['approval_id']}** · `role request`  \n{item['user_id']} ({item['client_id']}) wants "
-                    f"**{item['role']}** on SAP user **{item['sap_user']}**  \nApprover: _client authorisation owner_")
-        c1, c2 = st.columns(2)
-        if c1.button("Approve", key=f"{prefix}ok{item['approval_id']}", type="primary", use_container_width=True):
-            try:
-                done = approvals.decide(item["approval_id"], approver, approve=True)
-                st.session_state.toast = f"{done['role']} assigned to {done['sap_user']}"
-            except Exception as exc:
-                st.session_state.toast = f"Could not assign the role: {exc}"
-            st.rerun()
-        if c2.button("Reject", key=f"{prefix}no{item['approval_id']}", use_container_width=True):
-            approvals.decide(item["approval_id"], approver, approve=False)
-            st.session_state.toast = f"{item['approval_id']} rejected"
-            st.rerun()
+def writes_switch() -> None:
+    st.toggle("Mock writes", key="writes_on",
+              help="Off: approving records the decision but changes nothing in the mock systems. On: an approved "
+                   "action is applied to the mock systems.")
+    st.caption("Writes are **on**: approving applies the action." if st.session_state.get("writes_on") else
+               "Writes are **off**: approvals are recorded, nothing is written. Turn on to apply.")
 
 
 def approvals_panel(key: str) -> None:
     ui = AGENT_UI[key]
-    st.subheader("Waiting for approval")
+    st.subheader("Review before saving")
+    writes_switch()
     approver = st.text_input("Approving as", ui["approver"], key=f"approver_{key}")
     items = approvals.list_all("pending") if key == "support" else actions.list_all("pending", key)
     if not items:
         st.caption(f"Nothing waiting. Run step 3 to create a request for the {ui['human'].split(':')[1].strip()}.")
     for item in items:
-        (role_card if key == "support" else action_card)(item, approver, f"{key}_")
+        review_card(item, approver, f"{key}_")
 
 
 def records(title: str, rows: list[dict], cols: list[str]) -> None:
     st.markdown(f"**{title}**")
     if rows:
-        table(pd.DataFrame(rows)[cols])
+        table(pd.DataFrame(rows).reindex(columns=cols).fillna(""))
     else:
         st.caption("None yet")
 
 
 def live_state(key: str) -> None:
     st.subheader("Live view of the mock systems")
-    st.caption("Read straight from the mock APIs, so you can see what changed after an approval.")
+    st.caption("Read straight from the mock APIs, so you can see what changed after an approval, and the exact "
+               "approved text it carried.")
     try:
         if key == "support":
             rows = [get("sap", f"/sap-users/{u}") for u in ("ASHAV", "ROHANM", "PRIYAN", "KABIRS", "MEERAI")]
             records("SAP users (S/4HANA)", rows, ["sap_user", "lock_status", "roles"])
+            records("SAP change documents for ASHAV", get("sap", "/sap-users/ASHAV/changes"),
+                    ["change_id", "change", "note"])
         elif key == "sla":
             records("Escalations sent (service desk)", get("service_desk", "/queue/escalations"),
-                    ["escalation_id", "ticket_ids", "approved_by"])
+                    ["escalation_id", "ticket_ids", "approved_by", "note"])
         elif key == "change":
             crs = get("changes", "/changes")
             records("Change requests", crs, ["cr_id", "title", "target_date", "status"])
             sent = [a for c in crs for a in get("changes", f"/changes/{c['cr_id']}/assessments")]
-            records("Assessments submitted to CAB", sent, ["assessment_id", "cr_id", "approved_by"])
+            records("Assessments submitted to CAB", sent, ["assessment_id", "cr_id", "approved_by", "note"])
         else:
             records("Interface messages", get("integration", "/messages"),
                     ["msg_id", "interface", "error_code", "status"])
-            records("Reprocessing runs", get("integration", "/reprocess-log"), ["run_id", "msg_ids", "approved_by"])
+            records("Reprocessing runs", get("integration", "/reprocess-log"),
+                    ["run_id", "msg_ids", "approved_by", "note"])
     except (httpx.HTTPError, KeyError, ValueError) as exc:
         st.warning(f"Couldn't read the mock systems: {exc}")
+
+
+# ---- record editor -----------------------------------------------------------------------
+def admin_record(api: str, table_name: str, rid: str) -> dict:
+    resp = httpx.get(f"{launcher.URLS[api]}/_admin/records/{table_name}/{rid}", timeout=3)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _rec_spec(key: str, i: int) -> tuple[tuple, str]:
+    spec = EDITABLE[key][i]
+    return spec, f"rec_text_{key}_{spec[3]}"
+
+
+def save_record(key: str, i: int) -> None:
+    (label, api, table_name, rid, schema, key_field), tkey = _rec_spec(key, i)
+    try:
+        original = admin_record(api, table_name, rid)
+        record, reasons = check_record(st.session_state[tkey], original, schema, key_field)
+        if reasons:
+            st.session_state[f"rec_msg_{key}"] = (
+                False, f"Not saved: {label} failed the {schema.__name__} check.\n\n" + "\n".join(f"- {r}" for r in reasons))
+            return
+        resp = httpx.put(f"{launcher.URLS[api]}/_admin/records/{table_name}/{rid}", json=record, timeout=3)
+        resp.raise_for_status()
+        changed = sorted(k for k in record if record[k] != original[k])
+        approvals.audit("record_edited", api=api, record=rid, fields=changed)
+        st.session_state[tkey] = json.dumps(record, indent=2)
+        st.session_state[f"rec_msg_{key}"] = (
+            True, f"Saved {label}" + (f" ({', '.join(changed)} changed)" if changed else " (no changes)")
+            + ". Re-run a step to see the agent use it.")
+    except httpx.HTTPError as exc:
+        st.session_state[f"rec_msg_{key}"] = (False, f"Couldn't reach the mock system: {exc}")
+
+
+def reload_record(key: str, i: int) -> None:
+    (label, api, table_name, rid, *_), tkey = _rec_spec(key, i)
+    try:
+        st.session_state[tkey] = json.dumps(admin_record(api, table_name, rid), indent=2)
+        st.session_state.pop(f"rec_msg_{key}", None)
+    except httpx.HTTPError as exc:
+        st.session_state[f"rec_msg_{key}"] = (False, f"Couldn't reach the mock system: {exc}")
+
+
+def record_editor(key: str) -> None:
+    with st.expander("Inspect or edit the source records (schema-checked)"):
+        st.caption("Change a value, save it, then re-run a step: the agent's answer follows the data. A record is "
+                   "saved only if it passes the same schema the agent's API client enforces, with the same fields. "
+                   "Edits change the shared demo until **Reset demo data**.")
+        specs = EDITABLE[key]
+        i = st.selectbox("Record", range(len(specs)), format_func=lambda n: specs[n][0], key=f"rec_pick_{key}")
+        (label, api, table_name, rid, schema, _), tkey = _rec_spec(key, i)
+        if tkey not in st.session_state:
+            try:
+                st.session_state[tkey] = json.dumps(admin_record(api, table_name, rid), indent=2)
+            except httpx.HTTPError as exc:
+                st.warning(f"Couldn't read {label}: {exc}")
+                return
+        st.text_area(f"{label} · checked against {schema.__name__}", key=tkey, height=260)
+        c1, c2 = st.columns(2)
+        c1.button("Check and save", key=f"rec_save_{key}", type="primary", on_click=save_record, args=(key, i),
+                  use_container_width=True)
+        c2.button("Reload from the system", key=f"rec_reload_{key}", on_click=reload_record, args=(key, i),
+                  use_container_width=True)
+        if msg := st.session_state.get(f"rec_msg_{key}"):
+            (st.success if msg[0] else st.error)(msg[1])
 
 
 def task_tabs(key: str) -> None:
@@ -431,6 +567,7 @@ def chat_page(key: str) -> None:
         step_buttons(key, EDGE_CASES[key], "edge", numbered=False)
         st.caption(f"Guardrail on every request: at most {config.MAX_TOOL_STEPS} tool calls and "
                    f"{config.TURN_BUDGET_S:.0f} s, then the agent stops.")
+        record_editor(key)
 
         history = st.session_state.setdefault(f"history_{key}", {}).setdefault(actor, [])
         for turn in history:
@@ -508,7 +645,8 @@ elif page in PAGE_TO_AGENT:
 elif page == "Approvals":
     st.header("Approvals")
     st.caption("Everything the agents propose waits here (and on each agent's page). Nothing is sent, assigned, "
-               "submitted or reprocessed until a person approves it.")
+               "submitted or reprocessed until a person approves its exact text, with mock writes on.")
+    writes_switch()
     approver = st.text_input("Approving as", "approver.demo")
     pending = actions.list_all("pending")
     roles = approvals.list_all("pending")
@@ -518,29 +656,33 @@ elif page == "Approvals":
     for i, item in enumerate(pending):
         with cols[i % 2]:
             st.caption(AGENT_UI[item["agent"]]["title"])
-            action_card(item, approver, "all_")
+            review_card(item, approver, "all_")
     for i, item in enumerate(roles):
         with cols[(len(pending) + i) % 2]:
             st.caption(AGENT_UI["support"]["title"])
-            role_card(item, approver, "all_")
+            review_card(item, approver, "all_")
     decided = [i for i in actions.list_all() if i["status"] != "pending"]
     decided_roles = [i for i in approvals.list_all() if i["status"] != "pending"]
     if decided or decided_roles:
         st.subheader("Decided")
         rows = [{"id": i["action_id"], "agent": i["agent"], "what": i["action"], "status": i["status"],
                  "by": i.get("decided_by", ""), "at": i.get("decided_at", ""),
-                 "result": ", ".join(map(str, (i.get("result") or {}).values()))}
+                 "result": ", ".join(map(str, (i.get("result") or {}).values())),
+                 "revisions": len(i.get("revisions", [])), "approved text": i.get("text", "")}
                 for i in decided]
         rows += [{"id": i["approval_id"], "agent": "support", "what": f"role {i['role']} for {i['sap_user']}",
-                  "status": i["status"], "by": i.get("decided_by", ""), "at": i.get("decided_at", ""), "result": ""}
+                  "status": i["status"], "by": i.get("decided_by", ""), "at": i.get("decided_at", ""), "result": "",
+                  "revisions": len(i.get("revisions", [])), "approved text": i.get("text", "")}
                  for i in decided_roles]
         table(pd.DataFrame(rows))
     audit_path = config.RUNTIME_DIR / "audit.jsonl"
     if audit_path.exists():
         st.subheader("Audit log (latest 25)")
         rows = [json.loads(l) for l in audit_path.read_text(encoding="utf-8").splitlines()[-25:]]
+        for r in rows:
+            r["item"] = r.get("action_id") or r.get("approval_id") or r.get("record", "")
         table(pd.DataFrame(rows[::-1]).reindex(columns=["ts", "event", "agent", "user_id", "tool", "role",
-                                                        "action_id"]).fillna(""))
+                                                        "item"]).fillna(""))
 
 # ---------------------------------------------------------------- Monitoring
 elif page == "Monitoring":

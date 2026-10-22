@@ -29,12 +29,13 @@ def _load() -> None:
 
 
 _load()
-faults.install(app, injector, _load)
+faults.install(app, injector, _load, db=_db, tables=("messages",))
 
 
 class ReprocessRequest(BaseModel):
     msg_ids: list[str] = Field(min_length=1, max_length=50)
     approved_by: str = Field(min_length=3)
+    note: str = ""          # the exact text the approver approved
 
 
 @app.get("/messages")

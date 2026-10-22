@@ -1,4 +1,4 @@
-# Pinned for local runs, Docker and Streamlit Community Cloud (a change here makes the host rebuild).
+# Pinned for local runs, Docker and Streamlit Community Cloud (any change here makes the host rebuild and restart).
 anthropic==1.17.0
 fastapi==0.156.8
 httpx==0.28.1
