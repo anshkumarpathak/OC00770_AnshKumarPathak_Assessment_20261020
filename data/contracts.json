@@ -1,0 +1,58 @@
+[
+ {
+  "client_id": "CL01",
+  "client_name": "Kestrel Foods Pvt Ltd",
+  "sla_plan": "standard",
+  "service_manager": "Kestrel client service manager",
+  "sla_rules": [
+   {
+    "rule_id": "SLA-STD-P1",
+    "priority": "P1",
+    "resolve_hours": 8
+   },
+   {
+    "rule_id": "SLA-STD-P2",
+    "priority": "P2",
+    "resolve_hours": 16
+   },
+   {
+    "rule_id": "SLA-STD-P3",
+    "priority": "P3",
+    "resolve_hours": 40
+   },
+   {
+    "rule_id": "SLA-STD-P4",
+    "priority": "P4",
+    "resolve_hours": 120
+   }
+  ]
+ },
+ {
+  "client_id": "CL02",
+  "client_name": "Meridian Retail Ltd",
+  "sla_plan": "premium",
+  "service_manager": "Meridian client service manager",
+  "sla_rules": [
+   {
+    "rule_id": "SLA-PRE-P1",
+    "priority": "P1",
+    "resolve_hours": 4
+   },
+   {
+    "rule_id": "SLA-PRE-P2",
+    "priority": "P2",
+    "resolve_hours": 8
+   },
+   {
+    "rule_id": "SLA-PRE-P3",
+    "priority": "P3",
+    "resolve_hours": 24
+   },
+   {
+    "rule_id": "SLA-PRE-P4",
+    "priority": "P4",
+    "resolve_hours": 72
+   }
+  ]
+ }
+]

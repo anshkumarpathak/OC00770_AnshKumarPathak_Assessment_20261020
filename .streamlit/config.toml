@@ -1,0 +1,7 @@
+# Shared by local runs and hosted deployments. The local launchers add
+# --server.address 127.0.0.1 so a laptop run is only reachable from that laptop.
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

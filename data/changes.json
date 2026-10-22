@@ -1,0 +1,59 @@
+[
+ {
+  "cr_id": "CR-501",
+  "client": "Kestrel Foods",
+  "title": "Add GST e-invoice number to vendor invoice form",
+  "objects": [
+   "ZFI_INVOICE_FORM",
+   "ZFI_VENDOR_EXIT"
+  ],
+  "target_date": "2026-10-29",
+  "requested_by": "Kestrel AP lead",
+  "status": "awaiting_assessment"
+ },
+ {
+  "cr_id": "CR-502",
+  "client": "Meridian Retail",
+  "title": "Change pricing routine for festive promotions",
+  "objects": [
+   "ZSD_PRICING_901"
+  ],
+  "target_date": "2026-10-22",
+  "requested_by": "Meridian sales ops head",
+  "status": "awaiting_assessment"
+ },
+ {
+  "cr_id": "CR-503",
+  "client": "Kestrel Foods",
+  "title": "New field on stock report",
+  "objects": [
+   "ZMM_STOCK_REPORT"
+  ],
+  "target_date": "2026-11-12",
+  "requested_by": "Kestrel warehouse lead",
+  "status": "awaiting_assessment"
+ },
+ {
+  "cr_id": "CR-504",
+  "client": "Kestrel Foods",
+  "title": "Change payment run variant for new bank",
+  "objects": [
+   "ZFI_PAYRUN_VARIANT",
+   "ZFI_BANK_EXIT"
+  ],
+  "target_date": "2026-11-05",
+  "requested_by": "Kestrel treasury lead",
+  "status": "awaiting_assessment"
+ },
+ {
+  "cr_id": "CR-505",
+  "client": "Meridian Retail",
+  "title": "Add region to sales report",
+  "objects": [
+   "ZSD_SALES_REPORT"
+  ],
+  "target_date": "2026-10-27",
+  "requested_by": "Meridian finance controller",
+  "status": "approved"
+ }
+]

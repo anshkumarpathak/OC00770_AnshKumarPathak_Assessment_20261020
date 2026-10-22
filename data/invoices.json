@@ -1,0 +1,50 @@
+[
+ {
+  "invoice_id": "INV-5101",
+  "client_id": "CL01",
+  "po_id": "PO-4503",
+  "vendor": "ColdChain Logistics",
+  "amount": 42000.0,
+  "status": "paid",
+  "block_reason": null,
+  "posted_at": "2026-10-08",
+  "due_date": "2026-10-15",
+  "paid_at": "2026-10-15"
+ },
+ {
+  "invoice_id": "INV-5102",
+  "client_id": "CL01",
+  "po_id": "PO-4502",
+  "vendor": "Agro Spices Co",
+  "amount": 79200.0,
+  "status": "blocked",
+  "block_reason": "price_variance",
+  "posted_at": "2026-10-19",
+  "due_date": "2026-11-18",
+  "paid_at": null
+ },
+ {
+  "invoice_id": "INV-5103",
+  "client_id": "CL02",
+  "po_id": "PO-4505",
+  "vendor": "Metro Power Services",
+  "amount": 95000.0,
+  "status": "blocked",
+  "block_reason": "missing_goods_receipt",
+  "posted_at": "2026-10-14",
+  "due_date": "2026-11-13",
+  "paid_at": null
+ },
+ {
+  "invoice_id": "INV-5104",
+  "client_id": "CL02",
+  "po_id": "PO-4505",
+  "vendor": "Metro Power Services",
+  "amount": 12500.0,
+  "status": "posted",
+  "block_reason": null,
+  "posted_at": "2026-10-17",
+  "due_date": "2026-11-05",
+  "paid_at": null
+ }
+]

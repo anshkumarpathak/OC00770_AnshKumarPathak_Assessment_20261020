@@ -1,0 +1,97 @@
+[
+ {
+  "po_id": "PO-4501",
+  "client_id": "CL01",
+  "requested_by": "U002",
+  "vendor": "Sunrise Packaging",
+  "status": "awaiting_approval",
+  "approver": "Procurement lead, Kestrel Foods",
+  "created_at": "2026-10-13",
+  "approved_at": null,
+  "items": [
+   {
+    "material": "Corrugated boxes",
+    "qty": 4000,
+    "unit_price": 40.0
+   },
+   {
+    "material": "Shrink wrap rolls",
+    "qty": 120,
+    "unit_price": 200.0
+   }
+  ],
+  "total": 184000.0
+ },
+ {
+  "po_id": "PO-4502",
+  "client_id": "CL01",
+  "requested_by": "U002",
+  "vendor": "Agro Spices Co",
+  "status": "approved",
+  "approver": "Procurement lead, Kestrel Foods",
+  "created_at": "2026-10-16",
+  "approved_at": "2026-10-19",
+  "items": [
+   {
+    "material": "Turmeric powder (kg)",
+    "qty": 450,
+    "unit_price": 170.0
+   }
+  ],
+  "total": 76500.0
+ },
+ {
+  "po_id": "PO-4503",
+  "client_id": "CL01",
+  "requested_by": "U005",
+  "vendor": "ColdChain Logistics",
+  "status": "goods_received",
+  "approver": "Procurement lead, Kestrel Foods",
+  "created_at": "2026-10-01",
+  "approved_at": "2026-10-02",
+  "items": [
+   {
+    "material": "Reefer transport (trips)",
+    "qty": 6,
+    "unit_price": 7000.0
+   }
+  ],
+  "total": 42000.0
+ },
+ {
+  "po_id": "PO-4504",
+  "client_id": "CL02",
+  "requested_by": "U004",
+  "vendor": "BrightShelf Fixtures",
+  "status": "awaiting_approval",
+  "approver": "Regional manager, Meridian Retail",
+  "created_at": "2026-10-19",
+  "approved_at": null,
+  "items": [
+   {
+    "material": "Gondola shelving units",
+    "qty": 24,
+    "unit_price": 13000.0
+   }
+  ],
+  "total": 312000.0
+ },
+ {
+  "po_id": "PO-4505",
+  "client_id": "CL02",
+  "requested_by": "U003",
+  "vendor": "Metro Power Services",
+  "status": "approved",
+  "approver": "Regional manager, Meridian Retail",
+  "created_at": "2026-10-06",
+  "approved_at": "2026-10-07",
+  "items": [
+   {
+    "material": "Store electrical maintenance",
+    "qty": 1,
+    "unit_price": 95000.0
+   }
+  ],
+  "total": 95000.0
+ }
+]

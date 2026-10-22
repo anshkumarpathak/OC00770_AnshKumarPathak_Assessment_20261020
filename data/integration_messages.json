@@ -1,0 +1,83 @@
+[
+ {
+  "msg_id": "MSG-5001",
+  "interface": "Vendor invoices EDI 810",
+  "timestamp": "2026-10-20T02:10:00",
+  "status": "failed",
+  "error_code": "IDOC51-VENDOR",
+  "partner_ref": "300087",
+  "detail": "IDoc status 51: vendor 300087 not found"
+ },
+ {
+  "msg_id": "MSG-5002",
+  "interface": "Vendor invoices EDI 810",
+  "timestamp": "2026-10-20T02:12:00",
+  "status": "failed",
+  "error_code": "IDOC51-VENDOR",
+  "partner_ref": "300087",
+  "detail": "IDoc status 51: vendor 300087 not found"
+ },
+ {
+  "msg_id": "MSG-5003",
+  "interface": "Vendor invoices EDI 810",
+  "timestamp": "2026-10-20T03:40:00",
+  "status": "processed",
+  "error_code": null,
+  "partner_ref": "300045",
+  "detail": ""
+ },
+ {
+  "msg_id": "MSG-5004",
+  "interface": "POS sales upload",
+  "timestamp": "2026-10-20T04:00:00",
+  "status": "failed",
+  "error_code": "TIMEOUT-POS",
+  "partner_ref": "STORE-214",
+  "detail": "target did not respond in 60 s"
+ },
+ {
+  "msg_id": "MSG-5005",
+  "interface": "POS sales upload",
+  "timestamp": "2026-10-20T04:05:00",
+  "status": "failed",
+  "error_code": "TIMEOUT-POS",
+  "partner_ref": "STORE-215",
+  "detail": "target did not respond in 60 s"
+ },
+ {
+  "msg_id": "MSG-5006",
+  "interface": "POS sales upload",
+  "timestamp": "2026-10-20T04:10:00",
+  "status": "failed",
+  "error_code": "TIMEOUT-POS",
+  "partner_ref": "STORE-216",
+  "detail": "target did not respond in 60 s"
+ },
+ {
+  "msg_id": "MSG-5007",
+  "interface": "Bank statement import MT940",
+  "timestamp": "2026-10-20T06:00:00",
+  "status": "failed",
+  "error_code": "MT940-DUP",
+  "partner_ref": "HDFC-STMT-198",
+  "detail": "statement 2026-198 already imported"
+ },
+ {
+  "msg_id": "MSG-5008",
+  "interface": "Payment file to bank PAYEXT",
+  "timestamp": "2026-10-20T07:15:00",
+  "status": "failed",
+  "error_code": "PAY-AUTH",
+  "partner_ref": "PAYRUN-1020",
+  "detail": "bank rejected signature"
+ },
+ {
+  "msg_id": "MSG-5009",
+  "interface": "Vendor invoices EDI 810",
+  "timestamp": "2026-10-20T08:20:00",
+  "status": "failed",
+  "error_code": "IDOC51-VENDOR",
+  "partner_ref": "300112",
+  "detail": "IDoc status 51: vendor 300112 not found"
+ }
+]

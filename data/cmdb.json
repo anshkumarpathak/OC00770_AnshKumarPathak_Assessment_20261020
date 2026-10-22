@@ -1,0 +1,59 @@
+[
+ {
+  "object": "ZFI_INVOICE_FORM",
+  "application": "Accounts payable invoice print",
+  "interfaces": [
+   "Vendor e-invoice portal"
+  ],
+  "test_suite": "TS-FI-AP-01",
+  "business_owner": "Kestrel AP lead",
+  "criticality": "medium"
+ },
+ {
+  "object": "ZFI_VENDOR_EXIT",
+  "application": "Vendor master",
+  "interfaces": [
+   "Vendor onboarding API"
+  ],
+  "test_suite": "TS-MD-VEN-02",
+  "business_owner": "Kestrel master data lead",
+  "criticality": "high"
+ },
+ {
+  "object": "ZSD_PRICING_901",
+  "application": "Sales order and POS pricing",
+  "interfaces": [
+   "POS sales upload",
+   "Promotions engine"
+  ],
+  "test_suite": "TS-SD-PRC-04",
+  "business_owner": "Meridian sales ops head",
+  "criticality": "high"
+ },
+ {
+  "object": "ZMM_STOCK_REPORT",
+  "application": "Stock reporting",
+  "interfaces": [],
+  "test_suite": "TS-MM-REP-01",
+  "business_owner": "Kestrel warehouse lead",
+  "criticality": "low"
+ },
+ {
+  "object": "ZFI_PAYRUN_VARIANT",
+  "application": "Payment run",
+  "interfaces": [
+   "Payment file to bank PAYEXT"
+  ],
+  "test_suite": "TS-FI-PAY-03",
+  "business_owner": "Kestrel treasury lead",
+  "criticality": "high"
+ },
+ {
+  "object": "ZSD_SALES_REPORT",
+  "application": "Sales reporting",
+  "interfaces": [],
+  "test_suite": "TS-SD-REP-02",
+  "business_owner": "Meridian finance controller",
+  "criticality": "low"
+ }
+]

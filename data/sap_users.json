@@ -1,0 +1,49 @@
+[
+ {
+  "sap_user": "ASHAV",
+  "client_id": "CL01",
+  "lock_status": "locked_failed_logins",
+  "last_login": "2026-10-19",
+  "roles": [
+   "Z_FI_AP_CLERK",
+   "Z_FI_DISPLAY"
+  ]
+ },
+ {
+  "sap_user": "ROHANM",
+  "client_id": "CL01",
+  "lock_status": "unlocked",
+  "last_login": "2026-10-20",
+  "roles": [
+   "Z_MM_BUYER"
+  ]
+ },
+ {
+  "sap_user": "PRIYAN",
+  "client_id": "CL02",
+  "lock_status": "unlocked",
+  "last_login": "2026-10-20",
+  "roles": [
+   "Z_FI_CONTROLLER",
+   "Z_FI_DISPLAY"
+  ]
+ },
+ {
+  "sap_user": "KABIRS",
+  "client_id": "CL02",
+  "lock_status": "locked_by_admin",
+  "last_login": "2026-09-30",
+  "roles": [
+   "Z_SD_STORE"
+  ]
+ },
+ {
+  "sap_user": "MEERAI",
+  "client_id": "CL01",
+  "lock_status": "unlocked",
+  "last_login": "2026-10-18",
+  "roles": [
+   "Z_WM_OPERATOR"
+  ]
+ }
+]

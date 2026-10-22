@@ -1,0 +1,52 @@
+[
+ {
+  "user_id": "U001",
+  "name": "Asha Verma",
+  "email": "asha.verma@example.com",
+  "client_id": "CL01",
+  "client_name": "Kestrel Foods Pvt Ltd",
+  "sla_plan": "standard",
+  "job_role": "Accounts payable key user",
+  "sap_user": "ASHAV"
+ },
+ {
+  "user_id": "U002",
+  "name": "Rohan Mehta",
+  "email": "rohan.mehta@example.com",
+  "client_id": "CL01",
+  "client_name": "Kestrel Foods Pvt Ltd",
+  "sla_plan": "standard",
+  "job_role": "Procurement key user",
+  "sap_user": "ROHANM"
+ },
+ {
+  "user_id": "U003",
+  "name": "Priya Nair",
+  "email": "priya.nair@example.com",
+  "client_id": "CL02",
+  "client_name": "Meridian Retail Ltd",
+  "sla_plan": "premium",
+  "job_role": "Finance controller",
+  "sap_user": "PRIYAN"
+ },
+ {
+  "user_id": "U004",
+  "name": "Kabir Singh",
+  "email": "kabir.singh@example.com",
+  "client_id": "CL02",
+  "client_name": "Meridian Retail Ltd",
+  "sla_plan": "premium",
+  "job_role": "Store operations key user",
+  "sap_user": "KABIRS"
+ },
+ {
+  "user_id": "U005",
+  "name": "Meera Iyer",
+  "email": "meera.iyer@example.com",
+  "client_id": "CL01",
+  "client_name": "Kestrel Foods Pvt Ltd",
+  "sla_plan": "standard",
+  "job_role": "Warehouse key user",
+  "sap_user": "MEERAI"
+ }
+]
