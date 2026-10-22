@@ -4,6 +4,9 @@ Four agentic AI assistants for the kind of SAP application management (AMS) work
 clients. Each one is built to the same standard and covers Tasks 1–4 on its own, and they share one demo
 (Task 5).
 
+**Live demo:** https://oc00770-sap-agents.streamlit.app (Streamlit Community Cloud, mock data only; the first
+visit after a quiet spell can take a minute while the app wakes up).
+
 | Agent | Who uses it | Two enterprise APIs (mocked) | Human approval | Never |
 |---|---|---|---|---|
 | **Support desk assistant** (built first) | Client key users | Service desk (ITSM) + SAP S/4HANA | Role requests: client authorisation owner | Payment-block release, bank details, production transports, SAP_ALL |
@@ -49,8 +52,10 @@ The launchers bind to 127.0.0.1, so only your own machine can reach the portal.
 The whole app is one process: Streamlit starts the six mock APIs inside the same machine, on localhost ports
 8101–8106, so any host that runs Streamlit or Docker can serve it.
 
-**Option A · Streamlit Community Cloud** (free, simplest)
-1. Push this folder to a GitHub repository; a private one works. `.gitignore` keeps `.venv/` and `runtime/` out.
+**Option A · Streamlit Community Cloud** (free, simplest; this is how the live demo above runs)
+1. Push this folder to a public GitHub repository. `.gitignore` keeps `.venv/` and `runtime/` out. Private repos
+   need Streamlit's private-repo access on your GitHub account; if the deploy form says the repository does not
+   exist, Streamlit can only see your public repos.
 2. Sign in at https://share.streamlit.io with GitHub and choose **Create app → Deploy a public app from
    GitHub**.
 3. Pick the repository and branch, set **Main file path** to `dashboard/app.py`, and under **Advanced
